@@ -32,8 +32,18 @@ public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationM
             
             let args = call.arguments as? Dictionary<String, Any>
             let distanceFilter = args?["distance_filter"] as? Double
+            let priority = args?["priority"] as? Int
             SwiftBackgroundLocationPlugin.locationManager?.distanceFilter = distanceFilter ?? 0
-            
+
+            if (priority == 0)
+                SwiftBackgroundLocationPlugin.locationManager?.desiredAccuracy = kCLLocationAccuracyBest
+            if (priority == 1)
+                SwiftBackgroundLocationPlugin.locationManager?.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
+            if (priority == 2)
+                SwiftBackgroundLocationPlugin.locationManager?.desiredAccuracy = kCLLocationAccuracyHundredMeters
+            if (priority == 3)
+                SwiftBackgroundLocationPlugin.locationManager?.desiredAccuracy = kCLLocationAccuracyReduced
+
             SwiftBackgroundLocationPlugin.locationManager?.startUpdatingLocation() 
         } else if (call.method == "stop_location_service") {
             SwiftBackgroundLocationPlugin.channel?.invokeMethod("location", arguments: "stop_location_service")

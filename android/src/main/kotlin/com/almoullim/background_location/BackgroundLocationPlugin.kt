@@ -8,6 +8,7 @@ import android.location.Location
 import android.os.IBinder
 import android.util.Log
 import android.widget.Toast
+import android.os.Build
 import androidx.core.app.ActivityCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.almoullim.background_location.Utils
@@ -20,14 +21,13 @@ import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry
 import io.flutter.plugin.common.PluginRegistry.Registrar
 
-
 class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPermissionsResultListener {
 
 
     private lateinit var registrar: Registrar
     private lateinit var channel: MethodChannel
     private var myReceiver: MyReceiver? = null
-    private var mService: LocationUpdatesService? = null
+//    private var mService: LocationUpdatesService? = null
     private var mBound: Boolean = false
 
     companion object {
@@ -54,32 +54,50 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                 requestPermissions()
             }
         }
-        LocalBroadcastManager.getInstance(registrar.activeContext()).registerReceiver(myReceiver!!,
-                IntentFilter(LocationUpdatesService.ACTION_BROADCAST))
+        LocalBroadcastManager.getInstance(registrar.activeContext()).registerReceiver(
+            myReceiver!!,
+            IntentFilter(LocationUpdatesService.ACTION_BROADCAST)
+        )
     }
 
 
     override fun onMethodCall(call: MethodCall, result: Result) {
         when {
             call.method == "stop_location_service" -> {
-                mService?.removeLocationUpdates()
                 LocalBroadcastManager.getInstance(registrar.activeContext()).unregisterReceiver(myReceiver!!)
 
-                if (mBound) {
-                    registrar.activeContext().unbindService(mServiceConnection)
-                    mBound = false
+                val intent = Intent(registrar.activeContext(), LocationUpdatesService::class.java);
+                intent.setAction(LocationUpdatesService.ACTION_STOP_FOREGROUND_SERVICE)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    registrar.activeContext().startForegroundService(intent)
+                } else {
+                    registrar.activeContext().startService(intent)
                 }
 
                 result.success(0);
             }
             call.method == "start_location_service" -> {
-                LocalBroadcastManager.getInstance(registrar.activeContext()).registerReceiver(myReceiver!!,
-                        IntentFilter(LocationUpdatesService.ACTION_BROADCAST))
+                LocalBroadcastManager.getInstance(registrar.activeContext()).registerReceiver(
+                    myReceiver!!,
+                    IntentFilter(LocationUpdatesService.ACTION_BROADCAST)
+                )
                 if (!mBound) {
-                    val distanceFilter : Double? = call.argument("distance_filter")                    
+                    val interval : Int? = call.argument("interval")
+                    val fastestInterval : Int? = call.argument("fastest_interval")
+                    val priority : Int? = call.argument("priority")
+                    val distanceFilter : Double? = call.argument("distance_filter")
                     val intent = Intent(registrar.activeContext(), LocationUpdatesService::class.java);
+                    intent.setAction(LocationUpdatesService.ACTION_START_FOREGROUND_SERVICE)
+                    intent.putExtra("interval", interval?.toLong())
+                    intent.putExtra("fastest_interval", fastestInterval?.toLong())
+                    intent.putExtra("priority", priority)
                     intent.putExtra("distance_filter", distanceFilter)
-                    registrar.activeContext().bindService(intent, mServiceConnection, Context.BIND_AUTO_CREATE)
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        registrar.activeContext().startForegroundService(intent)
+                    } else {
+                        registrar.activeContext().startService(intent)
+                    }
                 }
 
                 result.success(0);
@@ -94,15 +112,13 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                 if (notificationMessage != null) LocationUpdatesService.NOTIFICATION_MESSAGE = notificationMessage
                 if (notificationIcon != null) LocationUpdatesService.NOTIFICATION_ICON = notificationIcon
 
-                if (mService != null) {
-                    mService?.updateNotification()
+                val intent = Intent(registrar.activeContext(), LocationUpdatesService::class.java);
+                intent.setAction(LocationUpdatesService.ACTION_UPDATE_NOTIFICATION)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    registrar.activeContext().startForegroundService(intent)
+                } else {
+                    registrar.activeContext().startService(intent)
                 }
-
-                result.success(0);
-            }
-            call.method == "set_configuration" -> {
-                val timeInterval: Long? = call.argument<String>("interval")?.toLongOrNull();
-                if (timeInterval != null) LocationUpdatesService.UPDATE_INTERVAL_IN_MILLISECONDS = timeInterval
 
                 result.success(0);
             }
@@ -110,40 +126,13 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
         }
     }
 
-
-    private val mServiceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName, service: IBinder) {
-            mBound = true
-            val binder = service as LocationUpdatesService.LocalBinder
-            mService = binder.service
-            requestLocation()
-        }
-
-        override fun onServiceDisconnected(name: ComponentName) {
-            mService = null
-        }
-    }
-
-
-    private fun requestLocation() {
-
-        if (!checkPermissions()) {
-            requestPermissions()
-        } else {
-            mService!!.requestLocationUpdates()
-        }
-
-
-    }
-
-
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>?, grantResults: IntArray?): Boolean {
 
         Log.i(TAG, "onRequestPermissionResult")
         if (requestCode == REQUEST_PERMISSIONS_REQUEST_CODE) {
             when {
                 grantResults!!.isEmpty() -> Log.i(TAG, "User interaction was cancelled.")
-                grantResults[0] == PackageManager.PERMISSION_GRANTED -> mService!!.requestLocationUpdates()
+//                grantResults[0] == PackageManager.PERMISSION_GRANTED -> mService!!.requestLocationUpdates()
                 else -> Toast.makeText(registrar.activeContext(), R.string.permission_denied_explanation, Toast.LENGTH_LONG).show()
             }
         }
@@ -170,13 +159,17 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
     }
 
     private fun checkPermissions(): Boolean {
-        return PackageManager.PERMISSION_GRANTED == ActivityCompat.checkSelfPermission(registrar.activeContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION)
+        return PackageManager.PERMISSION_GRANTED == ActivityCompat.checkSelfPermission(
+            registrar.activeContext(),
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
     }
 
     private fun requestPermissions() {
-        val shouldProvideRationale = ActivityCompat.shouldShowRequestPermissionRationale(registrar.activity(),
-                Manifest.permission.ACCESS_FINE_LOCATION)
+        val shouldProvideRationale = ActivityCompat.shouldShowRequestPermissionRationale(
+            registrar.activity(),
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
         if (shouldProvideRationale) {
 
             Log.i(TAG, "Displaying permission rationale to provide additional context.")
@@ -184,9 +177,11 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
 
         } else {
             Log.i(TAG, "Requesting permission")
-            ActivityCompat.requestPermissions(registrar.activity(),
-                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                    REQUEST_PERMISSIONS_REQUEST_CODE)
+            ActivityCompat.requestPermissions(
+                registrar.activity(),
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                REQUEST_PERMISSIONS_REQUEST_CODE
+            )
         }
     }
 

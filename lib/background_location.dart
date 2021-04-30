@@ -5,6 +5,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+enum LocationPriority {
+  /// The best level of accuracy available.
+  PRIORITY_HIGH_ACCURACY,
+  // Accurate to within one hundred meters.
+  PRIORITY_BALANCED_POWER_ACCURACY,
+  // Accurate to within ten meters of the desired target.
+  PRIORITY_LOW_POWER,
+  // The level of accuracy used when an app isn’t authorized for full accuracy location data.
+  PRIORITY_NO_POWER,
+}
+
 /// BackgroundLocation plugin to get background
 /// lcoation updates in iOS and Android
 class BackgroundLocation {
@@ -19,9 +30,19 @@ class BackgroundLocation {
   }
 
   /// Start receiving location updated
-  static startLocationService({double distanceFilter = 0.0}) async {
+  static startLocationService({
+    int interval = 1000,
+    int fastestInterval = 500,
+    double distanceFilter = 0.0,
+    LocationPriority priority = LocationPriority.PRIORITY_HIGH_ACCURACY,
+  }) async {
     return await _channel.invokeMethod('start_location_service',
-        <String, dynamic>{'distance_filter': distanceFilter});
+        <String, dynamic>{
+          'interval': interval,
+          'fastest_interval': fastestInterval,
+          'priority': priority.index,
+          'distance_filter': distanceFilter,
+        });
   }
 
   static setAndroidNotification(
@@ -29,16 +50,6 @@ class BackgroundLocation {
     if (Platform.isAndroid) {
       return await _channel.invokeMethod('set_android_notification',
           <String, dynamic>{'title': title, 'message': message, 'icon': icon});
-    } else {
-      //return Promise.resolve();
-    }
-  }
-
-  static setAndroidConfiguration(int interval) async {
-    if (Platform.isAndroid) {
-      return await _channel.invokeMethod('set_configuration', <String, dynamic>{
-        'interval': interval.toString(),
-      });
     } else {
       //return Promise.resolve();
     }
