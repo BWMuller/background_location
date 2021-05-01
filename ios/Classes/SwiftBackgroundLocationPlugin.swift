@@ -5,7 +5,12 @@ import CoreLocation
 public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate {
     static var locationManager: CLLocationManager?
     static var channel: FlutterMethodChannel?
-    
+
+    static var engine: FlutterEngine?
+    static var backgroundChannel: FlutterMethodChannel?
+    static var locationCallback: Int64?
+    static var callbackHandle: Int64?
+
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = SwiftBackgroundLocationPlugin()
         
@@ -31,8 +36,22 @@ public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationM
             SwiftBackgroundLocationPlugin.channel?.invokeMethod("location", arguments: "start_location_service")
             
             let args = call.arguments as? Dictionary<String, Any>
+            locationCallback = call.argument("locationCallback") as? Int64
+            callbackHandle = call.argument("callbackHandle") as? Int64
             let distanceFilter = args?["distance_filter"] as? Double
             let priority = args?["priority"] as? Int
+
+            guard let handle = locationCallback,
+                  let flutterCallbackInformation = FlutterCallbackCache.lookupCallbackInformation(handle) else {
+                return
+            }
+
+            engine = FlutterEngine(name: "almoullim.com/background_location_thread", project: nil, allowHeadlessExecution: true)
+            engine!.run(withEntrypoint: flutterCallbackInformation.callbackName, libraryURI: flutterCallbackInformation.callbackLibraryPath)
+            engine!.registrar(forPlugin: "SwiftBackgroundLocationPlugin")
+
+            SwiftBackgroundLocationPlugin.backgroundChannel = FlutterMethodChannel(name: "BACKGROUND_CHANNEL_ID", binaryMessenger: engine!.binaryMessenger)
+
             SwiftBackgroundLocationPlugin.locationManager?.distanceFilter = distanceFilter ?? 0
 
             if (priority == 0)
@@ -71,5 +90,13 @@ public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationM
         ] as [String : Any]
 
         SwiftBackgroundLocationPlugin.channel?.invokeMethod("location", arguments: location)
+
+
+        val result: HashMap<Any, Any> =
+            hashMapOf(
+                "ARG_LOCATION" to location,
+                "ARG_CALLBACK" to locationCallback
+            )
+        SwiftBackgroundLocationPlugin.backgroundChannel?.invokeMethod("BCM_LOCATION", arguments: result)
     }
 }
