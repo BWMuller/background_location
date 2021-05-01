@@ -1,6 +1,10 @@
 package com.almoullim.background_location
 
-import android.app.*
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -9,7 +13,11 @@ import android.os.*
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.location.*
-
+import io.flutter.FlutterInjector
+import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.dart.DartExecutor
+import io.flutter.plugin.common.MethodChannel
+import io.flutter.view.FlutterCallbackInformation
 
 class LocationUpdatesService : Service() {
 
@@ -17,8 +25,10 @@ class LocationUpdatesService : Service() {
     private var mNotificationManager: NotificationManager? = null
     private var mLocationRequest: LocationRequest? = null
     private var mFusedLocationClient: FusedLocationProviderClient? = null
+    private var mLocationCallbackHandle: Long = 0L
     private var mLocationCallback: LocationCallback? = null
     private var mLocation: Location? = null
+    private var backgroundEngine: FlutterEngine? = null
 
     override fun onBind(intent: Intent?): IBinder? {
         val interval = intent?.getLongExtra("interval", 0L) ?: 0L
@@ -30,9 +40,10 @@ class LocationUpdatesService : Service() {
     }
 
     companion object {
+
         var NOTIFICATION_TITLE = "Background service is running"
         var NOTIFICATION_MESSAGE = "Background service is running"
-        var NOTIFICATION_ICON ="@mipmap/ic_launcher"
+        var NOTIFICATION_ICON = "@mipmap/ic_launcher"
 
         val ACTION_START_FOREGROUND_SERVICE = "ACTION_START_FOREGROUND_SERVICE"
         val ACTION_STOP_FOREGROUND_SERVICE = "ACTION_STOP_FOREGROUND_SERVICE"
@@ -80,39 +91,60 @@ class LocationUpdatesService : Service() {
                 ACTION_START_FOREGROUND_SERVICE -> triggerForegroundServiceStart(intent)
                 ACTION_STOP_FOREGROUND_SERVICE -> triggerForegroundServiceStop()
                 ACTION_UPDATE_NOTIFICATION -> updateNotification()
-                else -> {}
+                else -> {
+                }
             }
         }
         return super.onStartCommand(intent, flags, startId)
     }
 
     fun triggerForegroundServiceStart(intent: Intent) {
+
         val interval = intent.getLongExtra("interval", 0L) ?: 0L
         val fastestInterval = intent.getLongExtra("fastest_interval", 0L) ?: 0L
         val priority = intent.getIntExtra("priority", 0) ?: 0
         val distanceFilter = intent.getDoubleExtra("distance_filter", 0.0) ?: 0.0
         createLocationRequest(interval, fastestInterval, priority, distanceFilter)
+        setLocationCallback(intent.getLongExtra("locationCallback", 0L) ?: 0L)
 
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        val callbackHandle = intent.getLongExtra("callbackHandle", 0L) ?: 0L
+        if (callbackHandle != 0L && backgroundEngine == null) {
+            val callbackInfo = FlutterCallbackInformation.lookupCallbackInformation(callbackHandle)
 
-        mLocationCallback = object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult?) {
-                super.onLocationResult(locationResult)
-                onNewLocation(locationResult!!.lastLocation)
+            // We need flutter engine to handle callback, so if it is not available we have to create a
+            // Flutter engine without any view
+            backgroundEngine = FlutterEngine(this)
+
+            val args = DartExecutor.DartCallback(
+                this.assets,
+                FlutterInjector.instance().flutterLoader().findAppBundlePath(),
+                callbackInfo
+            )
+            backgroundEngine?.dartExecutor?.executeDartCallback(args)
+        }
+
+        if (mFusedLocationClient == null) {
+            mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+            mLocationCallback = object : LocationCallback() {
+                override fun onLocationResult(locationResult: LocationResult?) {
+                    super.onLocationResult(locationResult)
+                    onNewLocation(locationResult!!.lastLocation)
+                }
             }
+
+            getLastLocation()
+
+            mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager?
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val name = "Application Name"
+                val mChannel = NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW)
+                mChannel.setSound(null, null)
+                mNotificationManager?.createNotificationChannel(mChannel)
+            }
+
+            startForeground(NOTIFICATION_ID, notification.build())
         }
-
-        getLastLocation()
-
-        mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager?
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Application Name"
-            val mChannel = NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW)
-            mChannel.setSound(null, null)
-            mNotificationManager?.createNotificationChannel(mChannel)
-        }
-
-        startForeground(NOTIFICATION_ID, notification.build())
 
         requestLocationUpdates()
     }
@@ -144,15 +176,14 @@ class LocationUpdatesService : Service() {
     private fun getLastLocation() {
         try {
             mFusedLocationClient?.lastLocation
-                    ?.addOnCompleteListener { task ->
-                        if (task.isSuccessful && task.result != null) {
-                            mLocation = task.result
-                        } else {
-                        }
+                ?.addOnCompleteListener { task ->
+                    if (task.isSuccessful && task.result != null) {
+                        mLocation = task.result
+                    } else {
                     }
+                }
         } catch (unlikely: SecurityException) {
         }
-
     }
 
     private fun onNewLocation(location: Location) {
@@ -160,8 +191,36 @@ class LocationUpdatesService : Service() {
         val intent = Intent(ACTION_BROADCAST)
         intent.putExtra(EXTRA_LOCATION, location)
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
+
+        val backgroundChannel = MethodChannel(backgroundEngine?.dartExecutor?.binaryMessenger, "BACKGROUND_CHANNEL_ID")
+
+        val locationMap = HashMap<String, Any>()
+        locationMap["latitude"] = location.latitude
+        locationMap["longitude"] = location.longitude
+        locationMap["altitude"] = location.altitude
+        locationMap["accuracy"] = location.accuracy.toDouble()
+        locationMap["bearing"] = location.bearing.toDouble()
+        locationMap["speed"] = location.speed.toDouble()
+        locationMap["time"] = location.time.toDouble()
+        locationMap["is_mock"] = location.isFromMockProvider
+
+        val result: HashMap<Any, Any> =
+            hashMapOf(
+                "ARG_LOCATION" to locationMap,
+                "ARG_CALLBACK" to mLocationCallbackHandle
+            )
+
+        Looper.getMainLooper()?.let {
+            Handler(it)
+                .post {
+                    backgroundChannel.invokeMethod("BCM_LOCATION", result)
+                }
+        }
     }
 
+    private fun setLocationCallback(callback: Long) {
+        mLocationCallbackHandle = callback;
+    }
 
     private fun createLocationRequest(interval: Long, fastestInterval: Long, priority: Int, distanceFilter: Double) {
         mLocationRequest = LocationRequest()
@@ -178,12 +237,11 @@ class LocationUpdatesService : Service() {
         mLocationRequest?.smallestDisplacement = distanceFilter.toFloat()
     }
 
-
     inner class LocalBinder : Binder() {
+
         internal val service: LocationUpdatesService
             get() = this@LocationUpdatesService
     }
-
 
     override fun onDestroy() {
         super.onDestroy()

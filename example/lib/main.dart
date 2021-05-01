@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:background_location/background_location.dart';
 import 'package:flutter/material.dart';
 
@@ -48,7 +50,9 @@ class _MyAppState extends State<MyApp> {
                     );
                     //await BackgroundLocation.setAndroidConfiguration(1000);
                     await BackgroundLocation.startLocationService(
-                        distanceFilter: 20);
+                      distanceFilter: 20,
+                      backgroundCallback: locationCallback,
+                    );
                     BackgroundLocation.getLocationUpdates((location) {
                       setState(() {
                         latitude = location.latitude.toString();
@@ -58,7 +62,7 @@ class _MyAppState extends State<MyApp> {
                         bearing = location.bearing.toString();
                         speed = location.speed.toString();
                         time = DateTime.fromMillisecondsSinceEpoch(
-                                location.time!.toInt())
+                            location.time.toInt())
                             .toString();
                       });
                       print('''\n
@@ -103,7 +107,7 @@ class _MyAppState extends State<MyApp> {
 
   void getCurrentLocation() {
     BackgroundLocation().getCurrentLocation().then((location) {
-      print('This is current Location ' + location.toMap().toString());
+      print('This is current Location ' + location.toJson().toString());
     });
   }
 
@@ -112,4 +116,19 @@ class _MyAppState extends State<MyApp> {
     BackgroundLocation.stopLocationService();
     super.dispose();
   }
+}
+
+void locationCallback(Location location) {
+  log("Got Main location: $location");
+  // setState(() {
+  //   latitude = location.latitude.toString();
+  //   longitude = location.longitude.toString();
+  //   accuracy = location.accuracy.toString();
+  //   altitude = location.altitude.toString();
+  //   bearing = location.bearing.toString();
+  //   speed = location.speed.toString();
+  //   time = DateTime.fromMillisecondsSinceEpoch(
+  //       location.time.toInt())
+  //       .toString();
+  // });
 }

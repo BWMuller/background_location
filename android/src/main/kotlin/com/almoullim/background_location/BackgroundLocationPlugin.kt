@@ -6,6 +6,8 @@ import android.content.*
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.IBinder
+import android.os.Looper
+import android.os.Handler
 import android.util.Log
 import android.widget.Toast
 import android.os.Build
@@ -82,6 +84,8 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                     IntentFilter(LocationUpdatesService.ACTION_BROADCAST)
                 )
                 if (!mBound) {
+                    val locationCallback : Long? = call.argument("locationCallback")
+                    val callbackHandle : Long? = call.argument("callbackHandle")
                     val interval : Int? = call.argument("interval")
                     val fastestInterval : Int? = call.argument("fastest_interval")
                     val priority : Int? = call.argument("priority")
@@ -92,6 +96,8 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                     intent.putExtra("fastest_interval", fastestInterval?.toLong())
                     intent.putExtra("priority", priority)
                     intent.putExtra("distance_filter", distanceFilter)
+                    intent.putExtra("callbackHandle", callbackHandle)
+                    intent.putExtra("locationCallback", locationCallback)
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         registrar.activeContext().startForegroundService(intent)
