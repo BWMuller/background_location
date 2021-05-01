@@ -84,7 +84,7 @@ class LocationUpdatesService : Service() {
             return builder
         }
 
-    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent != null) {
             val action: String? = intent.getAction()
             when (action) {
@@ -169,8 +169,10 @@ class LocationUpdatesService : Service() {
     }
 
     fun triggerForegroundServiceStop() {
-        stopForeground(true)
-        stopSelf()
+        if (mFusedLocationClient != null) {
+            stopForeground(true)
+            stopSelf()
+        }
     }
 
     private fun getLastLocation() {
