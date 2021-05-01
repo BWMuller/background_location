@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:background_location/background_location.dart';
@@ -18,11 +19,14 @@ class _MyAppState extends State<MyApp> {
   String bearing = 'waiting...';
   String speed = 'waiting...';
   String time = 'waiting...';
+  StreamController<Location>? stream = null;
 
   @override
   void initState() {
     super.initState();
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +57,8 @@ class _MyAppState extends State<MyApp> {
                       distanceFilter: 20,
                       backgroundCallback: locationCallback,
                     );
-                    BackgroundLocation.getLocationUpdates((location) {
+                    stream = BackgroundLocation.getLocationUpdates();
+                    stream?.stream.listen((location) {
                       setState(() {
                         latitude = location.latitude.toString();
                         longitude = location.longitude.toString();
@@ -82,11 +87,6 @@ class _MyAppState extends State<MyApp> {
                     BackgroundLocation.stopLocationService();
                   },
                   child: Text('Stop Location Service')),
-              ElevatedButton(
-                  onPressed: () {
-                    getCurrentLocation();
-                  },
-                  child: Text('Get Current Location')),
             ],
           ),
         ),
@@ -105,15 +105,10 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  void getCurrentLocation() {
-    BackgroundLocation().getCurrentLocation().then((location) {
-      print('This is current Location ' + location.toJson().toString());
-    });
-  }
-
   @override
   void dispose() {
     BackgroundLocation.stopLocationService();
+    stream?.close();
     super.dispose();
   }
 }

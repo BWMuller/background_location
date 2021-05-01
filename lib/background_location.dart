@@ -76,26 +76,6 @@ class BackgroundLocation {
     }
   }
 
-  /// Get the current location once.
-  Future<Location> getCurrentLocation() async {
-    var completer = Completer<Location>();
-
-    await getLocationUpdates((location) {
-      completer.complete(Location(
-        latitude: location.latitude,
-        longitude: location.longitude,
-        accuracy: location.accuracy,
-        altitude: location.altitude,
-        bearing: location.bearing,
-        speed: location.speed,
-        time: location.time,
-        isMock: location.isMock,
-      ));
-    });
-
-    return completer.future;
-  }
-
   /// Ask the user for location permissions
   // ignore: always_declare_return_types
   static getPermissions({Function? onGranted, Function? onDenied}) async {
@@ -121,24 +101,26 @@ class BackgroundLocation {
 
   /// Register a function to recive location updates as long as the location
   /// service has started
-  static getLocationUpdates(void Function(Location) callback) async {
+  static StreamController<Location> getLocationUpdates() {
+    StreamController<Location> streamController = new StreamController();
     // add a handler on the channel to recive updates from the native classes
     _channel.setMethodCallHandler((MethodCall methodCall) async {
       if (methodCall.method == 'location') {
+        if (streamController.isClosed) return;
         var locationData = Map.from(methodCall.arguments);
-        callback(
-          Location(
-              latitude: locationData['latitude'],
-              longitude: locationData['longitude'],
-              altitude: locationData['altitude'],
-              accuracy: locationData['accuracy'],
-              bearing: locationData['bearing'],
-              speed: locationData['speed'],
-              time: locationData['time'],
-              isMock: locationData['is_mock']),
-        );
+        streamController.add(Location(
+            latitude: locationData['latitude'],
+            longitude: locationData['longitude'],
+            altitude: locationData['altitude'],
+            accuracy: locationData['accuracy'],
+            bearing: locationData['bearing'],
+            speed: locationData['speed'],
+            time: locationData['time'],
+            isMock: locationData['is_mock'],
+        ));
       }
     });
+    return streamController;
   }
 }
 
