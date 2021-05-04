@@ -214,7 +214,7 @@ class LocationUpdatesService : Service() {
         intent.putExtra(EXTRA_LOCATION, location)
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
 
-        val backgroundChannel = MethodChannel(backgroundEngine?.dartExecutor?.binaryMessenger, "BACKGROUND_CHANNEL_ID")
+        val backgroundChannel = MethodChannel(backgroundEngine?.dartExecutor?.binaryMessenger, "almoullim.com/background_location_service")
 
         val locationMap = HashMap<String, Any>()
         locationMap["latitude"] = location.latitude
@@ -241,12 +241,27 @@ class LocationUpdatesService : Service() {
     }
 
     private fun onNotificationActionClick(intent: Intent) {
-        val backgroundChannel = MethodChannel(backgroundEngine?.dartExecutor?.binaryMessenger, "BACKGROUND_CHANNEL_ID")
+        getLastLocation();
+        val backgroundChannel = MethodChannel(backgroundEngine?.dartExecutor?.binaryMessenger, "almoullim.com/background_location_service")
 
         val callback = intent.getLongExtra("ARG_CALLBACK", 0L) ?: 0L
 
+        val locationMap = HashMap<String, Any>()
+        val location = mLocation;
+        if (location != null) {
+            locationMap["latitude"] = location.latitude
+            locationMap["longitude"] = location.longitude
+            locationMap["altitude"] = location.altitude
+            locationMap["accuracy"] = location.accuracy.toDouble()
+            locationMap["bearing"] = location.bearing.toDouble()
+            locationMap["speed"] = location.speed.toDouble()
+            locationMap["time"] = location.time.toDouble()
+            locationMap["is_mock"] = location.isFromMockProvider
+        }
+
         val result: HashMap<Any, Any> =
             hashMapOf(
+                "ARG_LOCATION" to locationMap,
                 "ARG_CALLBACK" to callback
             )
 

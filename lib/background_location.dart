@@ -22,6 +22,7 @@ enum LocationPriority {
 }
 
 typedef LocationCallback = void Function(Location value);
+typedef OptLocationCallback = void Function(Location? value);
 
 /// BackgroundLocation plugin to get background
 /// lcoation updates in iOS and Android
@@ -74,7 +75,7 @@ class BackgroundLocation {
     String? message,
     String? icon,
     String? actionText,
-    void Function()? actionCallback = null,
+    OptLocationCallback? actionCallback = null,
   }) async {
     if (Platform.isAndroid) {
       var callback = 0;

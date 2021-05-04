@@ -106,8 +106,8 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-void actionCallback() {
-  log("Action pressed");
+void actionCallback(Location? location) {
+  log("Action pressed: $location");
 }
 
 void locationCallback(Location location) {

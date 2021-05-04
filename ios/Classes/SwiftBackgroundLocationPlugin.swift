@@ -50,7 +50,7 @@ public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationM
             engine!.run(withEntrypoint: flutterCallbackInformation.callbackName, libraryURI: flutterCallbackInformation.callbackLibraryPath)
             engine!.registrar(forPlugin: "SwiftBackgroundLocationPlugin")
 
-            SwiftBackgroundLocationPlugin.backgroundChannel = FlutterMethodChannel(name: "BACKGROUND_CHANNEL_ID", binaryMessenger: engine!.binaryMessenger)
+            SwiftBackgroundLocationPlugin.backgroundChannel = FlutterMethodChannel(name: "almoullim.com/background_location_service", binaryMessenger: engine!.binaryMessenger)
 
             SwiftBackgroundLocationPlugin.locationManager?.distanceFilter = distanceFilter ?? 0
 

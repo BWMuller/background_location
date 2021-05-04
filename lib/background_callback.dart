@@ -5,7 +5,7 @@ import 'package:background_location/background_location.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-const BACKGROUND_CHANNEL_ID = "BACKGROUND_CHANNEL_ID";
+const BACKGROUND_CHANNEL_ID = "almoullim.com/background_location_service";
 const ARG_CALLBACK = "ARG_CALLBACK";
 const ARG_LOCATION = "ARG_LOCATION";
 const BCM_LOCATION = "BCM_LOCATION";
@@ -31,11 +31,17 @@ void callbackHandler() {
     } else if (BCM_NOTIFICATION_ACTION == call.method) {
       final Map<dynamic, dynamic> args = call.arguments;
 
+      log("BGActionCallback: $args");
       int callbackArg = args[ARG_CALLBACK] ?? 0;
       if (callbackArg != 0) {
         final Function? callback = PluginUtilities.getCallbackFromHandle(CallbackHandle.fromRawHandle(callbackArg));
+        final dynamic locationJson = args[ARG_LOCATION];
+        Location? location = null;
+        if (locationJson != null) {
+          location = Location.fromJson(locationJson);
+        }
         if (callback != null)
-          callback();
+          callback(location);
       } else {
         log("BGActionCallback: $args");
       }
