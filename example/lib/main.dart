@@ -51,6 +51,8 @@ class _MyAppState extends State<MyApp> {
                       title: 'Background service is running',
                       message: 'Background location in progress',
                       icon: '@mipmap/ic_launcher',
+                      actionText: "Press Me!",
+                      actionCallback: actionCallback,
                     );
                     //await BackgroundLocation.setAndroidConfiguration(1000);
                     await BackgroundLocation.startLocationService(
@@ -70,15 +72,6 @@ class _MyAppState extends State<MyApp> {
                             location.time.toInt())
                             .toString();
                       });
-                      print('''\n
-                        Latitude:  $latitude
-                        Longitude: $longitude
-                        Altitude: $altitude
-                        Accuracy: $accuracy
-                        Bearing:  $bearing
-                        Speed: $speed
-                        Time: $time
-                      ''');
                     });
                   },
                   child: Text('Start Location Service')),
@@ -111,6 +104,10 @@ class _MyAppState extends State<MyApp> {
     stream?.close();
     super.dispose();
   }
+}
+
+void actionCallback() {
+  log("Action pressed");
 }
 
 void locationCallback(Location location) {

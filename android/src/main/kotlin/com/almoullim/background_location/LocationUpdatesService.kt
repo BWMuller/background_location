@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.location.Location
 import android.os.*
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.location.*
@@ -44,10 +45,13 @@ class LocationUpdatesService : Service() {
         var NOTIFICATION_TITLE = "Background service is running"
         var NOTIFICATION_MESSAGE = "Background service is running"
         var NOTIFICATION_ICON = "@mipmap/ic_launcher"
+        var NOTIFICATION_ACTION: String? = null
+        var NOTIFICATION_ACTION_CALLBACK: Long? = null
 
         val ACTION_START_FOREGROUND_SERVICE = "ACTION_START_FOREGROUND_SERVICE"
         val ACTION_STOP_FOREGROUND_SERVICE = "ACTION_STOP_FOREGROUND_SERVICE"
         val ACTION_UPDATE_NOTIFICATION = "ACTION_UPDATE_NOTIFICATION"
+        val ACTION_NOTIFICATION_ACTIONED = "ACTION_NOTIFICATION_ACTIONED"
 
         private val PACKAGE_NAME = "com.google.android.gms.location.sample.locationupdatesforegroundservice"
         private val TAG = LocationUpdatesService::class.java.simpleName
@@ -77,6 +81,22 @@ class LocationUpdatesService : Service() {
                 .setStyle(NotificationCompat.BigTextStyle().bigText(NOTIFICATION_MESSAGE))
                 .setContentIntent(pendingIntent)
 
+            if (NOTIFICATION_ACTION?.isNotEmpty() == true && NOTIFICATION_ACTION_CALLBACK != null) {
+                val actionIntent = Intent(this, LocationUpdatesService::class.java)
+                actionIntent.putExtra("ARG_CALLBACK", NOTIFICATION_ACTION_CALLBACK ?: 0L)
+                actionIntent.action = ACTION_NOTIFICATION_ACTIONED
+
+                val action = NotificationCompat.Action.Builder(
+                    0, NOTIFICATION_ACTION!!, PendingIntent.getService(
+                        this,
+                        0,
+                        actionIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT
+                    )
+                ).build()
+                builder.addAction(action)
+            }
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 builder.setChannelId(CHANNEL_ID)
             }
@@ -91,6 +111,7 @@ class LocationUpdatesService : Service() {
                 ACTION_START_FOREGROUND_SERVICE -> triggerForegroundServiceStart(intent)
                 ACTION_STOP_FOREGROUND_SERVICE -> triggerForegroundServiceStop()
                 ACTION_UPDATE_NOTIFICATION -> updateNotification()
+                ACTION_NOTIFICATION_ACTIONED -> onNotificationActionClick(intent)
                 else -> {
                 }
             }
@@ -216,6 +237,24 @@ class LocationUpdatesService : Service() {
             Handler(it)
                 .post {
                     backgroundChannel.invokeMethod("BCM_LOCATION", result)
+                }
+        }
+    }
+
+    private fun onNotificationActionClick(intent: Intent) {
+        val backgroundChannel = MethodChannel(backgroundEngine?.dartExecutor?.binaryMessenger, "BACKGROUND_CHANNEL_ID")
+
+        val callback = intent.getLongExtra("ARG_CALLBACK", 0L) ?: 0L
+
+        val result: HashMap<Any, Any> =
+            hashMapOf(
+                "ARG_CALLBACK" to callback
+            )
+
+        Looper.getMainLooper()?.let {
+            Handler(it)
+                .post {
+                    backgroundChannel.invokeMethod("BCM_NOTIFICATION_ACTION", result)
                 }
         }
     }

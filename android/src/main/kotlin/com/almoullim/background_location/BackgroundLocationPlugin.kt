@@ -113,10 +113,14 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                 val notificationTitle: String? = call.argument("title");
                 val notificationMessage: String? = call.argument("message");
                 val notificationIcon: String? = call.argument("icon");
+                val actionText: String? = call.argument("actionText");
+                val callback : Long? = call.argument("actionCallback")
 
                 if (notificationTitle != null) LocationUpdatesService.NOTIFICATION_TITLE = notificationTitle
                 if (notificationMessage != null) LocationUpdatesService.NOTIFICATION_MESSAGE = notificationMessage
                 if (notificationIcon != null) LocationUpdatesService.NOTIFICATION_ICON = notificationIcon
+                if (actionText != null) LocationUpdatesService.NOTIFICATION_ACTION = actionText
+                if (callback != null) LocationUpdatesService.NOTIFICATION_ACTION_CALLBACK = callback
 
                 val intent = Intent(registrar.activeContext(), LocationUpdatesService::class.java);
                 intent.setAction(LocationUpdatesService.ACTION_UPDATE_NOTIFICATION)

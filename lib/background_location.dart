@@ -22,13 +22,14 @@ enum LocationPriority {
 }
 
 typedef LocationCallback = void Function(Location value);
+
 /// BackgroundLocation plugin to get background
 /// lcoation updates in iOS and Android
 class BackgroundLocation {
   // The channel to be used for communication.
   // This channel is also refrenced inside both iOS and Abdroid classes
   static const MethodChannel _channel =
-      MethodChannel('almoullim.com/background_location');
+  MethodChannel('almoullim.com/background_location');
 
   /// Stop receiving location updates
   static stopLocationService() async {
@@ -44,12 +45,13 @@ class BackgroundLocation {
     LocationCallback? backgroundCallback = null,
   }) async {
     var callbackHandle =
-        PluginUtilities.getCallbackHandle(callbackHandler)!.toRawHandle();
+    PluginUtilities.getCallbackHandle(callbackHandler)!.toRawHandle();
     var locationCallback = 0;
     if (backgroundCallback != null) {
       try {
         locationCallback =
-            PluginUtilities.getCallbackHandle(backgroundCallback)!.toRawHandle();
+            PluginUtilities.getCallbackHandle(backgroundCallback)!
+                .toRawHandle();
       } catch (ex, stack) {
         log("Error getting callback handle", error: ex, stackTrace: stack);
       }
@@ -66,11 +68,32 @@ class BackgroundLocation {
     });
   }
 
-  static setAndroidNotification(
-      {String? title, String? message, String? icon}) async {
+  static setAndroidNotification({
+    String? title,
+    String? message,
+    String? icon,
+    String? actionText,
+    void Function()? actionCallback = null,
+  }) async {
     if (Platform.isAndroid) {
+      var callback = 0;
+      if (actionCallback != null) {
+        try {
+          callback =
+              PluginUtilities.getCallbackHandle(actionCallback)!
+                  .toRawHandle();
+        } catch (ex, stack) {
+          log("Error getting callback handle", error: ex, stackTrace: stack);
+        }
+      }
       return await _channel.invokeMethod('set_android_notification',
-          <String, dynamic>{'title': title, 'message': message, 'icon': icon});
+          <String, dynamic>{
+            'title': title,
+            'message': message,
+            'icon': icon,
+            'actionText': actionText,
+            'actionCallback': callback,
+          });
     } else {
       //return Promise.resolve();
     }
@@ -109,14 +132,14 @@ class BackgroundLocation {
         if (streamController.isClosed) return;
         var locationData = Map.from(methodCall.arguments);
         streamController.add(Location(
-            latitude: locationData['latitude'],
-            longitude: locationData['longitude'],
-            altitude: locationData['altitude'],
-            accuracy: locationData['accuracy'],
-            bearing: locationData['bearing'],
-            speed: locationData['speed'],
-            time: locationData['time'],
-            isMock: locationData['is_mock'],
+          latitude: locationData['latitude'],
+          longitude: locationData['longitude'],
+          altitude: locationData['altitude'],
+          accuracy: locationData['accuracy'],
+          bearing: locationData['bearing'],
+          speed: locationData['speed'],
+          time: locationData['time'],
+          isMock: locationData['is_mock'],
         ));
       }
     });
@@ -135,15 +158,14 @@ class Location {
   final double time;
   final bool isMock;
 
-  Location(
-      {required this.longitude,
-      required this.latitude,
-      required this.altitude,
-      required this.accuracy,
-      required this.bearing,
-      required this.speed,
-      required this.time,
-      required this.isMock});
+  Location({required this.longitude,
+    required this.latitude,
+    required this.altitude,
+    required this.accuracy,
+    required this.bearing,
+    required this.speed,
+    required this.time,
+    required this.isMock});
 
   factory Location.fromJson(Map<dynamic, dynamic> json) {
     bool isLocationMocked = Platform.isAndroid ? json['is_mock'] : false;

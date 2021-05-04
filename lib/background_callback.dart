@@ -9,6 +9,7 @@ const BACKGROUND_CHANNEL_ID = "BACKGROUND_CHANNEL_ID";
 const ARG_CALLBACK = "ARG_CALLBACK";
 const ARG_LOCATION = "ARG_LOCATION";
 const BCM_LOCATION = "BCM_LOCATION";
+const BCM_NOTIFICATION_ACTION = "BCM_NOTIFICATION_ACTION";
 
 @pragma('vm:entry-point')
 void callbackHandler() {
@@ -22,11 +23,21 @@ void callbackHandler() {
       int callbackArg = args[ARG_CALLBACK] ?? 0;
       if (callbackArg != 0) {
         final Function? callback = PluginUtilities.getCallbackFromHandle(CallbackHandle.fromRawHandle(callbackArg));
-        log("BGCallbackHandler: ${args[ARG_LOCATION]} - $callback");
         if (callback != null)
           callback(Location.fromJson(args[ARG_LOCATION]));
       } else {
-        log("BGCallback: $args");
+        log("BGLocationCallback: $args");
+      }
+    } else if (BCM_NOTIFICATION_ACTION == call.method) {
+      final Map<dynamic, dynamic> args = call.arguments;
+
+      int callbackArg = args[ARG_CALLBACK] ?? 0;
+      if (callbackArg != 0) {
+        final Function? callback = PluginUtilities.getCallbackFromHandle(CallbackHandle.fromRawHandle(callbackArg));
+        if (callback != null)
+          callback();
+      } else {
+        log("BGActionCallback: $args");
       }
     }
   });
