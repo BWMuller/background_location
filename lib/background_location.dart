@@ -69,6 +69,7 @@ class BackgroundLocation {
   }
 
   static setAndroidNotification({
+    String? channelID,
     String? title,
     String? message,
     String? icon,
@@ -88,6 +89,7 @@ class BackgroundLocation {
       }
       return await _channel.invokeMethod('set_android_notification',
           <String, dynamic>{
+            'channelID': channelID,
             'title': title,
             'message': message,
             'icon': icon,

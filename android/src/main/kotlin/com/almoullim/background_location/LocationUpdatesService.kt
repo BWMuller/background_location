@@ -42,6 +42,7 @@ class LocationUpdatesService : Service() {
 
     companion object {
 
+        var NOTIFICATION_CHANNEL_ID = "channel_01"
         var NOTIFICATION_TITLE = "Background service is running"
         var NOTIFICATION_MESSAGE = "Background service is running"
         var NOTIFICATION_ICON = "@mipmap/ic_launcher"
@@ -55,7 +56,6 @@ class LocationUpdatesService : Service() {
 
         private val PACKAGE_NAME = "com.google.android.gms.location.sample.locationupdatesforegroundservice"
         private val TAG = LocationUpdatesService::class.java.simpleName
-        private val CHANNEL_ID = "channel_01"
         internal val ACTION_BROADCAST = "$PACKAGE_NAME.broadcast"
         internal val EXTRA_LOCATION = "$PACKAGE_NAME.location"
         private val EXTRA_STARTED_FROM_NOTIFICATION = "$PACKAGE_NAME.started_from_notification"
@@ -98,7 +98,7 @@ class LocationUpdatesService : Service() {
             }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                builder.setChannelId(CHANNEL_ID)
+                builder.setChannelId(NOTIFICATION_CHANNEL_ID)
             }
 
             return builder
@@ -158,8 +158,7 @@ class LocationUpdatesService : Service() {
 
             mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager?
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val name = "Application Name"
-                val mChannel = NotificationChannel(CHANNEL_ID, name, NotificationManager.IMPORTANCE_LOW)
+                val mChannel = NotificationChannel(NOTIFICATION_CHANNEL_ID, NOTIFICATION_CHANNEL_ID, NotificationManager.IMPORTANCE_LOW)
                 mChannel.setSound(null, null)
                 mNotificationManager?.createNotificationChannel(mChannel)
             }

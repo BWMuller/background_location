@@ -110,12 +110,14 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
 
             }
             call.method == "set_android_notification" -> {
+                val channelID: String? = call.argument("channelID");
                 val notificationTitle: String? = call.argument("title");
                 val notificationMessage: String? = call.argument("message");
                 val notificationIcon: String? = call.argument("icon");
                 val actionText: String? = call.argument("actionText");
                 val callback : Long? = call.argument("actionCallback")
 
+                if (channelID != null) LocationUpdatesService.NOTIFICATION_CHANNEL_ID = channelID
                 if (notificationTitle != null) LocationUpdatesService.NOTIFICATION_TITLE = notificationTitle
                 if (notificationMessage != null) LocationUpdatesService.NOTIFICATION_MESSAGE = notificationMessage
                 if (notificationIcon != null) LocationUpdatesService.NOTIFICATION_ICON = notificationIcon
