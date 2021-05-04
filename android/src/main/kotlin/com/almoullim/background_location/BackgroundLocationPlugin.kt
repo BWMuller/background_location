@@ -25,14 +25,15 @@ import io.flutter.plugin.common.PluginRegistry.Registrar
 
 class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPermissionsResultListener {
 
-
     private lateinit var registrar: Registrar
     private lateinit var channel: MethodChannel
     private var myReceiver: MyReceiver? = null
-//    private var mService: LocationUpdatesService? = null
+
+    //    private var mService: LocationUpdatesService? = null
     private var mBound: Boolean = false
 
     companion object {
+
         @JvmStatic
         fun registerWith(registrar: Registrar) {
             val channel = MethodChannel(registrar.messenger(), "almoullim.com/background_location")
@@ -42,7 +43,6 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
         private const val TAG = "com.almoullim.Log.Tag"
         private const val REQUEST_PERMISSIONS_REQUEST_CODE = 34
     }
-
 
     constructor(registrar: Registrar, channel: MethodChannel) : this() {
         this.registrar = registrar
@@ -61,7 +61,6 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
             IntentFilter(LocationUpdatesService.ACTION_BROADCAST)
         )
     }
-
 
     override fun onMethodCall(call: MethodCall, result: Result) {
         when {
@@ -84,12 +83,22 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                     IntentFilter(LocationUpdatesService.ACTION_BROADCAST)
                 )
                 if (!mBound) {
-                    val locationCallback : Long? = call.argument("locationCallback")
-                    val callbackHandle : Long? = call.argument("callbackHandle")
-                    val interval : Int? = call.argument("interval")
-                    val fastestInterval : Int? = call.argument("fastest_interval")
-                    val priority : Int? = call.argument("priority")
-                    val distanceFilter : Double? = call.argument("distance_filter")
+                    var locationCallback: Long? = 0L
+                    try {
+                        locationCallback = call.argument("locationCallback")
+                    } catch (ex: Throwable) {
+                    }
+                    
+                    var callbackHandle: Long? = 0L
+                    try {
+                        callbackHandle = call.argument("callbackHandle")
+                    } catch (ex: Throwable) {
+                    }
+
+                    val interval: Int? = call.argument("interval")
+                    val fastestInterval: Int? = call.argument("fastest_interval")
+                    val priority: Int? = call.argument("priority")
+                    val distanceFilter: Double? = call.argument("distance_filter")
                     val intent = Intent(registrar.activeContext(), LocationUpdatesService::class.java);
                     intent.setAction(LocationUpdatesService.ACTION_START_FOREGROUND_SERVICE)
                     intent.putExtra("interval", interval?.toLong())
@@ -107,7 +116,6 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                 }
 
                 result.success(0);
-
             }
             call.method == "set_android_notification" -> {
                 val channelID: String? = call.argument("channelID");
@@ -115,7 +123,11 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                 val notificationMessage: String? = call.argument("message");
                 val notificationIcon: String? = call.argument("icon");
                 val actionText: String? = call.argument("actionText");
-                val callback : Long? = call.argument("actionCallback")
+                var callback: Long? = 0L
+                try {
+                    callback = call.argument("actionCallback")
+                } catch (ex: Throwable) {
+                }
 
                 if (channelID != null) LocationUpdatesService.NOTIFICATION_CHANNEL_ID = channelID
                 if (notificationTitle != null) LocationUpdatesService.NOTIFICATION_TITLE = notificationTitle
@@ -149,10 +161,10 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
             }
         }
         return true
-
     }
 
     private inner class MyReceiver : BroadcastReceiver() {
+
         override fun onReceive(context: Context, intent: Intent) {
             val location = intent.getParcelableExtra<Location>(LocationUpdatesService.EXTRA_LOCATION)
             if (location != null) {
@@ -186,7 +198,6 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
 
             Log.i(TAG, "Displaying permission rationale to provide additional context.")
             Toast.makeText(registrar.activeContext(), R.string.permission_rationale, Toast.LENGTH_LONG).show()
-
         } else {
             Log.i(TAG, "Requesting permission")
             ActivityCompat.requestPermissions(
@@ -196,6 +207,4 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
             )
         }
     }
-
-
 }
