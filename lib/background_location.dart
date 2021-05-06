@@ -39,6 +39,7 @@ class BackgroundLocation {
 
   /// Start receiving location updated
   static startLocationService({
+    bool startOnBoot = false,
     int interval = 1000,
     int fastestInterval = 500,
     double distanceFilter = 0.0,
@@ -62,6 +63,7 @@ class BackgroundLocation {
         .invokeMethod('start_location_service', <String, dynamic>{
       'callbackHandle': callbackHandle,
       'locationCallback': locationCallback,
+      'startOnBoot': startOnBoot,
       'interval': interval,
       'fastest_interval': fastestInterval,
       'priority': priority.index,

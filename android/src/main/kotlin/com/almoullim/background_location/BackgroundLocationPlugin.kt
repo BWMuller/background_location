@@ -88,19 +88,21 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                         locationCallback = call.argument("locationCallback")
                     } catch (ex: Throwable) {
                     }
-                    
+
                     var callbackHandle: Long? = 0L
                     try {
                         callbackHandle = call.argument("callbackHandle")
                     } catch (ex: Throwable) {
                     }
 
+                    val startOnBoot: Boolean? = call.argument("startOnBoot") ?: false
                     val interval: Int? = call.argument("interval")
                     val fastestInterval: Int? = call.argument("fastest_interval")
                     val priority: Int? = call.argument("priority")
                     val distanceFilter: Double? = call.argument("distance_filter")
                     val intent = Intent(registrar.activeContext(), LocationUpdatesService::class.java);
                     intent.setAction(LocationUpdatesService.ACTION_START_FOREGROUND_SERVICE)
+                    intent.putExtra("startOnBoot", startOnBoot)
                     intent.putExtra("interval", interval?.toLong())
                     intent.putExtra("fastest_interval", fastestInterval?.toLong())
                     intent.putExtra("priority", priority)

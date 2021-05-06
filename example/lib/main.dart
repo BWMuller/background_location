@@ -56,6 +56,7 @@ class _MyAppState extends State<MyApp> {
                     );
                     //await BackgroundLocation.setAndroidConfiguration(1000);
                     await BackgroundLocation.startLocationService(
+                      startOnBoot: true,
                       distanceFilter: 20,
                       backgroundCallback: locationCallback,
                     );

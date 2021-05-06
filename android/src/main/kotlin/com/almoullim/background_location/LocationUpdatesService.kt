@@ -17,10 +17,11 @@ import com.google.android.gms.location.*
 import io.flutter.FlutterInjector
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.dart.DartExecutor
+import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.view.FlutterCallbackInformation
 
-class LocationUpdatesService : Service() {
+class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
 
     private val mBinder = LocalBinder()
     private var mNotificationManager: NotificationManager? = null
@@ -30,6 +31,9 @@ class LocationUpdatesService : Service() {
     private var mLocationCallback: LocationCallback? = null
     private var mLocation: Location? = null
     private var backgroundEngine: FlutterEngine? = null
+    private val pref by lazy {
+        getSharedPreferences("backgroundLocationPreferences", Context.MODE_PRIVATE)
+    }
 
     override fun onBind(intent: Intent?): IBinder? {
         val interval = intent?.getLongExtra("interval", 0L) ?: 0L
@@ -53,6 +57,7 @@ class LocationUpdatesService : Service() {
         val ACTION_STOP_FOREGROUND_SERVICE = "ACTION_STOP_FOREGROUND_SERVICE"
         val ACTION_UPDATE_NOTIFICATION = "ACTION_UPDATE_NOTIFICATION"
         val ACTION_NOTIFICATION_ACTIONED = "ACTION_NOTIFICATION_ACTIONED"
+        val ACTION_ON_BOOT = "ACTION_ON_BOOT"
 
         private val PACKAGE_NAME = "com.google.android.gms.location.sample.locationupdatesforegroundservice"
         private val TAG = LocationUpdatesService::class.java.simpleName
@@ -112,6 +117,23 @@ class LocationUpdatesService : Service() {
                 ACTION_STOP_FOREGROUND_SERVICE -> triggerForegroundServiceStop()
                 ACTION_UPDATE_NOTIFICATION -> updateNotification()
                 ACTION_NOTIFICATION_ACTIONED -> onNotificationActionClick(intent)
+                ACTION_ON_BOOT -> {
+                    Log.i("LocationService", "Starting from boot")
+                    intent.putExtra("interval", pref.getLong("interval", 5000L))
+                    intent.putExtra("fastest_interval", pref.getLong("fastestInterval", 5000L))
+                    intent.putExtra("priority", pref.getInt("priority", 0))
+                    intent.putExtra("distance_filter", pref.getFloat("distanceFilter", 300.toFloat()).toDouble())
+                    intent.putExtra("locationCallback", pref.getLong("locationCallback", 0L))
+                    intent.putExtra("callbackHandle", pref.getLong("callbackHandle", 0L))
+
+                    NOTIFICATION_CHANNEL_ID = pref.getString("NOTIFICATION_CHANNEL_ID", NOTIFICATION_CHANNEL_ID) ?: NOTIFICATION_CHANNEL_ID
+                    NOTIFICATION_TITLE = pref.getString("NOTIFICATION_TITLE", NOTIFICATION_TITLE) ?: NOTIFICATION_TITLE
+                    NOTIFICATION_MESSAGE = pref.getString("NOTIFICATION_MESSAGE", NOTIFICATION_MESSAGE) ?: NOTIFICATION_MESSAGE
+                    NOTIFICATION_ICON = pref.getString("NOTIFICATION_ICON", NOTIFICATION_ICON) ?: NOTIFICATION_ICON
+                    NOTIFICATION_ACTION = pref.getString("NOTIFICATION_ACTION", NOTIFICATION_ACTION ?: "")
+                    NOTIFICATION_ACTION_CALLBACK = pref.getLong("NOTIFICATION_ACTION_CALLBACK", NOTIFICATION_ACTION_CALLBACK ?: 0L)
+                    triggerForegroundServiceStart(intent)
+                }
                 else -> {
                 }
             }
@@ -120,7 +142,9 @@ class LocationUpdatesService : Service() {
     }
 
     fun triggerForegroundServiceStart(intent: Intent) {
-
+        FlutterInjector.instance().flutterLoader().ensureInitializationComplete(this, null)
+        if (intent.getBooleanExtra("startOnBoot", false))
+            pref.edit().putBoolean("locationActive", true).commit()
         val interval = intent.getLongExtra("interval", 0L) ?: 0L
         val fastestInterval = intent.getLongExtra("fastest_interval", 0L) ?: 0L
         val priority = intent.getIntExtra("priority", 0) ?: 0
@@ -143,6 +167,20 @@ class LocationUpdatesService : Service() {
             )
             backgroundEngine?.dartExecutor?.executeDartCallback(args)
         }
+        val edit = pref.edit()
+        edit.putLong("interval", interval)
+        edit.putLong("fastestInterval", fastestInterval)
+        edit.putInt("priority", priority)
+        edit.putFloat("distanceFilter", distanceFilter.toFloat())
+        edit.putLong("locationCallback", mLocationCallbackHandle)
+        edit.putLong("callbackHandle", callbackHandle)
+        edit.putString("NOTIFICATION_CHANNEL_ID", NOTIFICATION_CHANNEL_ID)
+        edit.putString("NOTIFICATION_TITLE", NOTIFICATION_TITLE)
+        edit.putString("NOTIFICATION_MESSAGE", NOTIFICATION_MESSAGE)
+        edit.putString("NOTIFICATION_ICON", NOTIFICATION_ICON)
+        edit.putString("NOTIFICATION_ACTION", NOTIFICATION_ACTION ?: "")
+        edit.putLong("NOTIFICATION_ACTION_CALLBACK", NOTIFICATION_ACTION_CALLBACK ?: 0L)
+        edit.apply()
 
         if (mFusedLocationClient == null) {
             mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
@@ -189,6 +227,21 @@ class LocationUpdatesService : Service() {
     }
 
     fun triggerForegroundServiceStop() {
+        val edit = pref.edit()
+        edit.putBoolean("locationActive", false)
+        edit.remove("interval")
+        edit.remove("fastestInterval")
+        edit.remove("priority")
+        edit.remove("distanceFilter")
+        edit.remove("locationCallback")
+        edit.remove("callbackHandle")
+        edit.remove("NOTIFICATION_CHANNEL_ID")
+        edit.remove("NOTIFICATION_TITLE")
+        edit.remove("NOTIFICATION_MESSAGE")
+        edit.remove("NOTIFICATION_ICON")
+        edit.remove("NOTIFICATION_ACTION")
+        edit.remove("NOTIFICATION_ACTION_CALLBACK")
+        edit.commit()
         if (mFusedLocationClient != null) {
             stopForeground(true)
             stopSelf()
@@ -320,5 +373,16 @@ class LocationUpdatesService : Service() {
             e.printStackTrace()
             null
         }
+    }
+
+    override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
+        when (call.method) {
+            "BackgroundLocationService.initialized" -> {
+            }
+            else -> {
+            }
+        }
+
+        result.success(null)
     }
 }

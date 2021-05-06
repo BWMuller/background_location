@@ -47,5 +47,5 @@ void callbackHandler() {
       }
     }
   });
-  _backgroundChannel.invokeMethod("initialized");
+  _backgroundChannel.invokeMethod("BackgroundLocationService.initialized");
 }
