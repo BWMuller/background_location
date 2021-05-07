@@ -343,6 +343,7 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
         if (priority == 3)
             mLocationRequest?.priority = LocationRequest.PRIORITY_NO_POWER
         mLocationRequest?.smallestDisplacement = distanceFilter.toFloat()
+        mLocationRequest?.maxWaitTime = interval
     }
 
     inner class LocalBinder : Binder() {
