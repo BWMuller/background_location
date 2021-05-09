@@ -81,10 +81,18 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
                 .setOngoing(true)
                 .setSound(null)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
-                .setSmallIcon(resources.getIdentifier(NOTIFICATION_ICON, "mipmap", packageName))
                 .setWhen(System.currentTimeMillis())
                 .setStyle(NotificationCompat.BigTextStyle().bigText(NOTIFICATION_MESSAGE))
                 .setContentIntent(pendingIntent)
+
+            try {
+                if (NOTIFICATION_ICON.startsWith("@mipmap"))
+                    builder.setSmallIcon(resources.getIdentifier(NOTIFICATION_ICON, "mipmap", packageName))
+                if (NOTIFICATION_ICON.startsWith("@drawable"))
+                    builder.setSmallIcon(resources.getIdentifier(NOTIFICATION_ICON, "drawable", packageName))
+            } catch (tr: Throwable) {
+                Log.w(TAG, "Unable to set small notification icon", tr)
+            }
 
             if (NOTIFICATION_ACTION?.isNotEmpty() == true && NOTIFICATION_ACTION_CALLBACK != null) {
                 val actionIntent = Intent(this, LocationUpdatesService::class.java)
@@ -143,8 +151,7 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
 
     fun triggerForegroundServiceStart(intent: Intent) {
         FlutterInjector.instance().flutterLoader().ensureInitializationComplete(this, null)
-        if (intent.getBooleanExtra("startOnBoot", false))
-            pref.edit().putBoolean("locationActive", true).commit()
+        val startOnBoot = intent.getBooleanExtra("startOnBoot", false)
         val interval = intent.getLongExtra("interval", 0L) ?: 0L
         val fastestInterval = intent.getLongExtra("fastest_interval", 0L) ?: 0L
         val priority = intent.getIntExtra("priority", 0) ?: 0
@@ -168,6 +175,8 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
             backgroundEngine?.dartExecutor?.executeDartCallback(args)
         }
         val edit = pref.edit()
+        edit.putBoolean("locationActive", true)
+        edit.putBoolean("startOnBoot", startOnBoot)
         edit.putLong("interval", interval)
         edit.putLong("fastestInterval", fastestInterval)
         edit.putInt("priority", priority)
@@ -180,7 +189,7 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
         edit.putString("NOTIFICATION_ICON", NOTIFICATION_ICON)
         edit.putString("NOTIFICATION_ACTION", NOTIFICATION_ACTION ?: "")
         edit.putLong("NOTIFICATION_ACTION_CALLBACK", NOTIFICATION_ACTION_CALLBACK ?: 0L)
-        edit.apply()
+        edit.commit()
 
         if (mFusedLocationClient == null) {
             mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
@@ -230,6 +239,7 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
         val edit = pref.edit()
         edit.putBoolean("locationActive", false)
         edit.remove("interval")
+        edit.remove("startOnBoot")
         edit.remove("fastestInterval")
         edit.remove("priority")
         edit.remove("distanceFilter")
@@ -253,7 +263,7 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
             mFusedLocationClient?.lastLocation
                 ?.addOnCompleteListener { task ->
                     if (task.isSuccessful && task.result != null) {
-                        mLocation = task.result
+                        onNewLocation(task.result!!)
                     } else {
                     }
                 }

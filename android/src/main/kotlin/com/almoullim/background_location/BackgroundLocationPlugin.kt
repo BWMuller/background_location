@@ -138,12 +138,15 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                 if (actionText != null) LocationUpdatesService.NOTIFICATION_ACTION = actionText
                 if (callback != null) LocationUpdatesService.NOTIFICATION_ACTION_CALLBACK = callback
 
-                val intent = Intent(registrar.activeContext(), LocationUpdatesService::class.java);
-                intent.setAction(LocationUpdatesService.ACTION_UPDATE_NOTIFICATION)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    registrar.activeContext().startForegroundService(intent)
-                } else {
-                    registrar.activeContext().startService(intent)
+                val pref = registrar.activeContext().getSharedPreferences("backgroundLocationPreferences", Context.MODE_PRIVATE)
+                if (pref.getBoolean("locationActive", false)) {
+                    val intent = Intent(registrar.activeContext(), LocationUpdatesService::class.java);
+                    intent.setAction(LocationUpdatesService.ACTION_UPDATE_NOTIFICATION)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        registrar.activeContext().startForegroundService(intent)
+                    } else {
+                        registrar.activeContext().startService(intent)
+                    }
                 }
 
                 result.success(0);

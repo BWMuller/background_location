@@ -18,7 +18,7 @@ class BootBroadcastReceiver : BroadcastReceiver() {
         serviceIntent.action = LocationUpdatesService.ACTION_ON_BOOT
         val pref = context.getSharedPreferences("backgroundLocationPreferences", Context.MODE_PRIVATE)
         Log.i(TAG, "BOOT Post Execute: ${pref.getBoolean("locationActive", false)}")
-        if (pref.getBoolean("locationActive", false)) {
+        if (pref.getBoolean("startOnBoot", false) && pref.getBoolean("locationActive", false)) {
             try {
                 val plugin = BackgroundLocationPlugin()
 
