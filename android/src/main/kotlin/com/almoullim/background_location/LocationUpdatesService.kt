@@ -94,10 +94,11 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
                 if (NOTIFICATION_ICON.startsWith("@drawable"))
                     resourceId = resources.getIdentifier(NOTIFICATION_ICON, "drawable", packageName)
 
-                val bitmap = BitmapFactory.decodeResource(resources, resourceId)
+                resources.getDrawable(resourceId)
                 builder.setSmallIcon(resourceId)
             } catch (tr: Throwable) {
                 Log.w(TAG, "Unable to set small notification icon", tr)
+                builder.setSmallIcon(resources.getIdentifier("@mipmap/ic_launcher", "mipmap", packageName))
             }
 
             if (NOTIFICATION_ACTION?.isNotEmpty() == true && NOTIFICATION_ACTION_CALLBACK != null) {
