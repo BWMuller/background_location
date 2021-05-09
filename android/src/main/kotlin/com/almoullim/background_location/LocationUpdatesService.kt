@@ -11,7 +11,9 @@ import android.content.IntentFilter
 import android.location.Location
 import android.os.*
 import android.util.Log
+import android.graphics.BitmapFactory
 import androidx.core.app.NotificationCompat
+import androidx.core.graphics.drawable.IconCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.android.gms.location.*
 import io.flutter.FlutterInjector
@@ -86,10 +88,14 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
                 .setContentIntent(pendingIntent)
 
             try {
+                var resourceId: Int = 0
                 if (NOTIFICATION_ICON.startsWith("@mipmap"))
-                    builder.setSmallIcon(resources.getIdentifier(NOTIFICATION_ICON, "mipmap", packageName))
+                    resourceId = resources.getIdentifier(NOTIFICATION_ICON, "mipmap", packageName)
                 if (NOTIFICATION_ICON.startsWith("@drawable"))
-                    builder.setSmallIcon(resources.getIdentifier(NOTIFICATION_ICON, "drawable", packageName))
+                    resourceId = resources.getIdentifier(NOTIFICATION_ICON, "drawable", packageName)
+
+                val bitmap = BitmapFactory.decodeResource(resources, resourceId)
+                builder.setSmallIcon(resourceId)
             } catch (tr: Throwable) {
                 Log.w(TAG, "Unable to set small notification icon", tr)
             }
