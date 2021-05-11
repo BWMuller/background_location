@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -36,6 +37,9 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
     private val pref by lazy {
         getSharedPreferences("backgroundLocationPreferences", Context.MODE_PRIVATE)
     }
+    private val actionReceiver by lazy {
+        ActionRequestReceiver()
+    }
     private var backgroundChannel: MethodChannel? = null
 
     override fun onBind(intent: Intent?): IBinder? {
@@ -64,6 +68,7 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
 
         private val PACKAGE_NAME = "com.google.android.gms.location.sample.locationupdatesforegroundservice"
         private val TAG = LocationUpdatesService::class.java.simpleName
+        internal val ACTION_SERVICE_REQUEST = "service_requests_action"
         internal val ACTION_BROADCAST = "$PACKAGE_NAME.broadcast"
         internal val EXTRA_LOCATION = "$PACKAGE_NAME.location"
         private val EXTRA_STARTED_FROM_NOTIFICATION = "$PACKAGE_NAME.started_from_notification"
@@ -124,6 +129,21 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
 
             return builder
         }
+
+    private inner class ActionRequestReceiver : BroadcastReceiver() {
+
+        override fun onReceive(context: Context, intent: Intent) {
+            if (intent == null) return;
+            val action: String? = intent.getStringExtra(ACTION_SERVICE_REQUEST)
+            when (action) {
+                ACTION_STOP_FOREGROUND_SERVICE -> triggerForegroundServiceStop()
+                ACTION_UPDATE_NOTIFICATION -> updateNotification()
+                ACTION_NOTIFICATION_ACTIONED -> onNotificationActionClick(intent)
+                else -> {
+                }
+            }
+        }
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent == null) {
@@ -203,6 +223,7 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
         edit.putLong("NOTIFICATION_ACTION_CALLBACK", NOTIFICATION_ACTION_CALLBACK ?: 0L)
         edit.commit()
 
+        LocalBroadcastManager.getInstance(this).registerReceiver(actionReceiver, IntentFilter("${packageName}.service_requests"))
         if (mFusedLocationClient == null) {
             mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -264,10 +285,9 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
         edit.remove("NOTIFICATION_ACTION")
         edit.remove("NOTIFICATION_ACTION_CALLBACK")
         edit.commit()
-        if (mFusedLocationClient != null) {
-            stopForeground(true)
-            stopSelf()
-        }
+        LocalBroadcastManager.getInstance(applicationContext).unregisterReceiver(actionReceiver)
+        stopForeground(true)
+        stopSelf()
     }
 
     private fun getLastLocation() {
