@@ -26,8 +26,6 @@ class _MyAppState extends State<MyApp> {
     super.initState();
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -70,12 +68,23 @@ class _MyAppState extends State<MyApp> {
                         bearing = location.bearing.toString();
                         speed = location.speed.toString();
                         time = DateTime.fromMillisecondsSinceEpoch(
-                            location.time.toInt())
+                                location.time.toInt())
                             .toString();
                       });
                     });
                   },
                   child: Text('Start Location Service')),
+              ElevatedButton(
+                  onPressed: () async {
+                    await BackgroundLocation.setAndroidNotification(
+                      title: 'Background service is still running',
+                      message:
+                          'Background location in progress ${DateTime.now().toIso8601String()}',
+                      icon: '@mipmap/ic_launcher',
+                      actionText: "Press Me!!!!!",
+                    );
+                  },
+                  child: Text('Update notification')),
               ElevatedButton(
                   onPressed: () {
                     BackgroundLocation.stopLocationService();

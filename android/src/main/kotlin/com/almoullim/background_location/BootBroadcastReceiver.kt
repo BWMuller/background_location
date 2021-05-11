@@ -7,7 +7,7 @@ import android.content.SharedPreferences
 import android.os.Build
 import android.util.Log
 import java.util.prefs.Preferences
-
+import androidx.core.content.ContextCompat
 
 class BootBroadcastReceiver : BroadcastReceiver() {
     private val TAG = BootBroadcastReceiver::class.java.simpleName
@@ -21,12 +21,7 @@ class BootBroadcastReceiver : BroadcastReceiver() {
         if (pref.getBoolean("startOnBoot", false) && pref.getBoolean("locationActive", false)) {
             try {
                 val plugin = BackgroundLocationPlugin()
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(serviceIntent)
-                } else {
-                    context.startService(serviceIntent)
-                }
+                ContextCompat.startForegroundService(context, serviceIntent)
             } catch (tr: Throwable) {
                 Log.w(TAG, "Error starting service", tr)
             }

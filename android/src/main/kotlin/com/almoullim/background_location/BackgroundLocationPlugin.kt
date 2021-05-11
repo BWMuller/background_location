@@ -12,6 +12,7 @@ import android.util.Log
 import android.widget.Toast
 import android.os.Build
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.almoullim.background_location.Utils
 import com.almoullim.background_location.LocationUpdatesService
@@ -69,12 +70,7 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
 
                 val intent = Intent(registrar.activeContext(), LocationUpdatesService::class.java);
                 intent.setAction(LocationUpdatesService.ACTION_STOP_FOREGROUND_SERVICE)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    registrar.activeContext().startForegroundService(intent)
-                } else {
-                    registrar.activeContext().startService(intent)
-                }
-
+                ContextCompat.startForegroundService(registrar.activeContext(), intent)
                 result.success(0);
             }
             call.method == "start_location_service" -> {
@@ -110,11 +106,7 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                     intent.putExtra("callbackHandle", callbackHandle)
                     intent.putExtra("locationCallback", locationCallback)
 
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        registrar.activeContext().startForegroundService(intent)
-                    } else {
-                        registrar.activeContext().startService(intent)
-                    }
+                    ContextCompat.startForegroundService(registrar.activeContext(), intent)
                 }
 
                 result.success(0);
@@ -142,11 +134,7 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                 if (pref.getBoolean("locationActive", false)) {
                     val intent = Intent(registrar.activeContext(), LocationUpdatesService::class.java);
                     intent.setAction(LocationUpdatesService.ACTION_UPDATE_NOTIFICATION)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        registrar.activeContext().startForegroundService(intent)
-                    } else {
-                        registrar.activeContext().startService(intent)
-                    }
+                    ContextCompat.startForegroundService(registrar.activeContext(), intent)
                 }
 
                 result.success(0);

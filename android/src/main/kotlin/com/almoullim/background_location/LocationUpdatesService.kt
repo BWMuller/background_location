@@ -36,6 +36,7 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
     private val pref by lazy {
         getSharedPreferences("backgroundLocationPreferences", Context.MODE_PRIVATE)
     }
+    private var backgroundChannel: MethodChannel? = null
 
     override fun onBind(intent: Intent?): IBinder? {
         val interval = intent?.getLongExtra("interval", 0L) ?: 0L
@@ -125,35 +126,36 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
         }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent != null) {
-            val action: String? = intent.getAction()
-            when (action) {
-                ACTION_START_FOREGROUND_SERVICE -> triggerForegroundServiceStart(intent)
-                ACTION_STOP_FOREGROUND_SERVICE -> triggerForegroundServiceStop()
-                ACTION_UPDATE_NOTIFICATION -> updateNotification()
-                ACTION_NOTIFICATION_ACTIONED -> onNotificationActionClick(intent)
-                ACTION_ON_BOOT -> {
-                    Log.i("LocationService", "Starting from boot")
-                    intent.putExtra("interval", pref.getLong("interval", 5000L))
-                    intent.putExtra("fastest_interval", pref.getLong("fastestInterval", 5000L))
-                    intent.putExtra("priority", pref.getInt("priority", 0))
-                    intent.putExtra("distance_filter", pref.getFloat("distanceFilter", 300.toFloat()).toDouble())
-                    intent.putExtra("locationCallback", pref.getLong("locationCallback", 0L))
-                    intent.putExtra("callbackHandle", pref.getLong("callbackHandle", 0L))
+        if (intent == null) {
+            return super.onStartCommand(intent, flags, startId)
+        }
+        val action: String? = intent.getAction()
+        when (action) {
+            ACTION_START_FOREGROUND_SERVICE -> triggerForegroundServiceStart(intent)
+            ACTION_STOP_FOREGROUND_SERVICE -> triggerForegroundServiceStop()
+            ACTION_UPDATE_NOTIFICATION -> updateNotification()
+            ACTION_NOTIFICATION_ACTIONED -> onNotificationActionClick(intent)
+            ACTION_ON_BOOT -> {
+                Log.i("LocationService", "Starting from boot")
+                intent.putExtra("interval", pref.getLong("interval", 5000L))
+                intent.putExtra("fastest_interval", pref.getLong("fastestInterval", 5000L))
+                intent.putExtra("priority", pref.getInt("priority", 0))
+                intent.putExtra("distance_filter", pref.getFloat("distanceFilter", 300.toFloat()).toDouble())
+                intent.putExtra("locationCallback", pref.getLong("locationCallback", 0L))
+                intent.putExtra("callbackHandle", pref.getLong("callbackHandle", 0L))
 
-                    NOTIFICATION_CHANNEL_ID = pref.getString("NOTIFICATION_CHANNEL_ID", NOTIFICATION_CHANNEL_ID) ?: NOTIFICATION_CHANNEL_ID
-                    NOTIFICATION_TITLE = pref.getString("NOTIFICATION_TITLE", NOTIFICATION_TITLE) ?: NOTIFICATION_TITLE
-                    NOTIFICATION_MESSAGE = pref.getString("NOTIFICATION_MESSAGE", NOTIFICATION_MESSAGE) ?: NOTIFICATION_MESSAGE
-                    NOTIFICATION_ICON = pref.getString("NOTIFICATION_ICON", NOTIFICATION_ICON) ?: NOTIFICATION_ICON
-                    NOTIFICATION_ACTION = pref.getString("NOTIFICATION_ACTION", NOTIFICATION_ACTION ?: "")
-                    NOTIFICATION_ACTION_CALLBACK = pref.getLong("NOTIFICATION_ACTION_CALLBACK", NOTIFICATION_ACTION_CALLBACK ?: 0L)
-                    triggerForegroundServiceStart(intent)
-                }
-                else -> {
-                }
+                NOTIFICATION_CHANNEL_ID = pref.getString("NOTIFICATION_CHANNEL_ID", NOTIFICATION_CHANNEL_ID) ?: NOTIFICATION_CHANNEL_ID
+                NOTIFICATION_TITLE = pref.getString("NOTIFICATION_TITLE", NOTIFICATION_TITLE) ?: NOTIFICATION_TITLE
+                NOTIFICATION_MESSAGE = pref.getString("NOTIFICATION_MESSAGE", NOTIFICATION_MESSAGE) ?: NOTIFICATION_MESSAGE
+                NOTIFICATION_ICON = pref.getString("NOTIFICATION_ICON", NOTIFICATION_ICON) ?: NOTIFICATION_ICON
+                NOTIFICATION_ACTION = pref.getString("NOTIFICATION_ACTION", NOTIFICATION_ACTION ?: "")
+                NOTIFICATION_ACTION_CALLBACK = pref.getLong("NOTIFICATION_ACTION_CALLBACK", NOTIFICATION_ACTION_CALLBACK ?: 0L)
+                triggerForegroundServiceStart(intent)
+            }
+            else -> {
             }
         }
-        return super.onStartCommand(intent, flags, startId)
+        return START_STICKY
     }
 
     fun triggerForegroundServiceStart(intent: Intent) {
@@ -181,6 +183,9 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
             )
             backgroundEngine?.dartExecutor?.executeDartCallback(args)
         }
+        backgroundChannel = MethodChannel(backgroundEngine?.dartExecutor?.binaryMessenger, "almoullim.com/background_location_service")
+        backgroundChannel?.setMethodCallHandler(this)
+
         val edit = pref.edit()
         edit.putBoolean("locationActive", true)
         edit.putBoolean("startOnBoot", startOnBoot)
@@ -284,8 +289,6 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
         intent.putExtra(EXTRA_LOCATION, location)
         LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(intent)
 
-        val backgroundChannel = MethodChannel(backgroundEngine?.dartExecutor?.binaryMessenger, "almoullim.com/background_location_service")
-
         val locationMap = HashMap<String, Any>()
         locationMap["latitude"] = location.latitude
         locationMap["longitude"] = location.longitude
@@ -305,14 +308,13 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
         Looper.getMainLooper()?.let {
             Handler(it)
                 .post {
-                    backgroundChannel.invokeMethod("BCM_LOCATION", result)
+                    backgroundChannel?.invokeMethod("BCM_LOCATION", result)
                 }
         }
     }
 
     private fun onNotificationActionClick(intent: Intent) {
         getLastLocation();
-        val backgroundChannel = MethodChannel(backgroundEngine?.dartExecutor?.binaryMessenger, "almoullim.com/background_location_service")
 
         val callback = intent.getLongExtra("ARG_CALLBACK", 0L) ?: 0L
 
@@ -338,7 +340,7 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
         Looper.getMainLooper()?.let {
             Handler(it)
                 .post {
-                    backgroundChannel.invokeMethod("BCM_NOTIFICATION_ACTION", result)
+                    backgroundChannel?.invokeMethod("BCM_NOTIFICATION_ACTION", result)
                 }
         }
     }
@@ -396,11 +398,11 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "BackgroundLocationService.initialized" -> {
+                result.success(0);
             }
             else -> {
+                result.success(null)
             }
         }
-
-        result.success(null)
     }
 }
