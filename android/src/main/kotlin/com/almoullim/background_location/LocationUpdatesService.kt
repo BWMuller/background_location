@@ -223,14 +223,18 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
         edit.putLong("NOTIFICATION_ACTION_CALLBACK", NOTIFICATION_ACTION_CALLBACK ?: 0L)
         edit.commit()
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(actionReceiver, IntentFilter("${packageName}.service_requests"))
         if (mFusedLocationClient == null) {
+            LocalBroadcastManager.getInstance(this).registerReceiver(actionReceiver, IntentFilter("${packageName}.service_requests"))
             mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
             mLocationCallback = object : LocationCallback() {
                 override fun onLocationResult(locationResult: LocationResult?) {
                     super.onLocationResult(locationResult)
-                    onNewLocation(locationResult!!.lastLocation)
+                    if (locationResult != null) {
+                        for (location in locationResult.getLocations()) {
+                            onNewLocation(location)
+                        }
+                    }
                 }
             }
 
@@ -252,8 +256,7 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
     fun requestLocationUpdates() {
         Utils.setRequestingLocationUpdates(this, true)
         try {
-            mFusedLocationClient?.requestLocationUpdates(
-                mLocationRequest,
+            mFusedLocationClient?.requestLocationUpdates(mLocationRequest,
                 mLocationCallback!!, Looper.myLooper()
             )
         } catch (unlikely: SecurityException) {

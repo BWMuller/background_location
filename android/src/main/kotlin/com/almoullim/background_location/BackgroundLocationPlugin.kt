@@ -68,12 +68,10 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
             call.method == "stop_location_service" -> {
                 LocalBroadcastManager.getInstance(registrar.activeContext()).unregisterReceiver(myReceiver!!)
 
-                val intent = Intent("${registrar.activeContext().packageName}.service_requests")
+                val intent = Intent(registrar.activeContext(), LocationUpdatesService::class.java)
+                intent.setAction("${registrar.activeContext().packageName}.service_requests")
                 intent.putExtra(LocationUpdatesService.ACTION_SERVICE_REQUEST, LocationUpdatesService.ACTION_STOP_FOREGROUND_SERVICE)
                 LocalBroadcastManager.getInstance(registrar.activeContext()).sendBroadcast(intent)
-//                val intent = Intent(registrar.activeContext(), LocationUpdatesService::class.java);
-//                intent.setAction(LocationUpdatesService.ACTION_STOP_FOREGROUND_SERVICE)
-//                ContextCompat.startForegroundService(registrar.activeContext(), intent)
                 result.success(0);
             }
             call.method == "start_location_service" -> {
@@ -135,12 +133,10 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
 
                 val pref = registrar.activeContext().getSharedPreferences("backgroundLocationPreferences", Context.MODE_PRIVATE)
                 if (pref.getBoolean("locationActive", false)) {
-                    val intent = Intent("${registrar.activeContext().packageName}.service_requests")
+                    val intent = Intent(registrar.activeContext(), LocationUpdatesService::class.java)
+                    intent.setAction("${registrar.activeContext().packageName}.service_requests")
                     intent.putExtra(LocationUpdatesService.ACTION_SERVICE_REQUEST, LocationUpdatesService.ACTION_UPDATE_NOTIFICATION)
                     LocalBroadcastManager.getInstance(registrar.activeContext()).sendBroadcast(intent)
-//                    val intent = Intent(registrar.activeContext(), LocationUpdatesService::class.java);
-//                    intent.setAction(LocationUpdatesService.ACTION_UPDATE_NOTIFICATION)
-//                    ContextCompat.startForegroundService(registrar.activeContext(), intent)
                 }
 
                 result.success(0);
