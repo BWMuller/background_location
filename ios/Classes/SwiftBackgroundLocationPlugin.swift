@@ -36,32 +36,40 @@ public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationM
             SwiftBackgroundLocationPlugin.channel?.invokeMethod("location", arguments: "start_location_service")
             
             let args = call.arguments as? Dictionary<String, Any>
-            locationCallback = call.argument("locationCallback") as? Int64
-            callbackHandle = call.argument("callbackHandle") as? Int64
+            SwiftBackgroundLocationPlugin.locationCallback = args?["locationCallback"] as? Int64
+            SwiftBackgroundLocationPlugin.callbackHandle = args?["callbackHandle"] as? Int64
             let distanceFilter = args?["distance_filter"] as? Double
             let priority = args?["priority"] as? Int
 
-            guard let handle = locationCallback,
+            guard let handle = SwiftBackgroundLocationPlugin.callbackHandle,
                   let flutterCallbackInformation = FlutterCallbackCache.lookupCallbackInformation(handle) else {
                 return
             }
 
-            engine = FlutterEngine(name: "almoullim.com/background_location_thread", project: nil, allowHeadlessExecution: true)
-            engine!.run(withEntrypoint: flutterCallbackInformation.callbackName, libraryURI: flutterCallbackInformation.callbackLibraryPath)
-            engine!.registrar(forPlugin: "SwiftBackgroundLocationPlugin")
+            SwiftBackgroundLocationPlugin.engine = FlutterEngine(name: "almoullim.com/background_location_thread", project: nil, allowHeadlessExecution: true)
+            SwiftBackgroundLocationPlugin.engine!.run(withEntrypoint: flutterCallbackInformation.callbackName, libraryURI: flutterCallbackInformation.callbackLibraryPath)
+            SwiftBackgroundLocationPlugin.engine!.registrar(forPlugin: "SwiftBackgroundLocationPlugin")
 
-            SwiftBackgroundLocationPlugin.backgroundChannel = FlutterMethodChannel(name: "almoullim.com/background_location_service", binaryMessenger: engine!.binaryMessenger)
+            SwiftBackgroundLocationPlugin.backgroundChannel = FlutterMethodChannel(name: "almoullim.com/background_location_service", binaryMessenger: SwiftBackgroundLocationPlugin.engine!.binaryMessenger)
 
             SwiftBackgroundLocationPlugin.locationManager?.distanceFilter = distanceFilter ?? 0
 
-            if (priority == 0)
+            if (priority == 0) {
                 SwiftBackgroundLocationPlugin.locationManager?.desiredAccuracy = kCLLocationAccuracyBest
-            if (priority == 1)
+            }
+            if (priority == 1) {
                 SwiftBackgroundLocationPlugin.locationManager?.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
-            if (priority == 2)
+            }
+            if (priority == 2) {
                 SwiftBackgroundLocationPlugin.locationManager?.desiredAccuracy = kCLLocationAccuracyHundredMeters
-            if (priority == 3)
-                SwiftBackgroundLocationPlugin.locationManager?.desiredAccuracy = kCLLocationAccuracyReduced
+            }
+            if (priority == 3) {
+                if #available(iOS 14.0, *) {
+                    SwiftBackgroundLocationPlugin.locationManager?.desiredAccuracy = kCLLocationAccuracyReduced
+                } else {
+                    // Fallback on earlier versions
+                }
+            }
 
             SwiftBackgroundLocationPlugin.locationManager?.startUpdatingLocation() 
         } else if (call.method == "stop_location_service") {
@@ -92,11 +100,10 @@ public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationM
         SwiftBackgroundLocationPlugin.channel?.invokeMethod("location", arguments: location)
 
 
-        val result: HashMap<Any, Any> =
-            hashMapOf(
-                "ARG_LOCATION" to location,
-                "ARG_CALLBACK" to locationCallback
-            )
+        let result = [
+            "ARG_LOCATION": location,
+            "ARG_CALLBACK": SwiftBackgroundLocationPlugin.locationCallback ?? 0
+        ] as [String : Any]
         SwiftBackgroundLocationPlugin.backgroundChannel?.invokeMethod("BCM_LOCATION", arguments: result)
     }
 }
