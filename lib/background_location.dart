@@ -102,27 +102,6 @@ class BackgroundLocation {
     }
   }
 
-  /// Get the current location once.
-  Future<Location> getCurrentLocation() async {
-    var completer = Completer<Location>();
-
-    var _location = Location();
-    await getLocationUpdates((location) {
-      _location.latitude = location.latitude;
-      _location.longitude = location.longitude;
-      _location.accuracy = location.accuracy;
-      _location.altitude = location.altitude;
-      _location.bearing = location.bearing;
-      _location.speed = location.speed;
-      _location.time = location.time;
-      completer.complete(_location);
-    });
-
-    return completer.future;
-  }
-
-
-
   /// Register a function to recive location updates as long as the location
   /// service has started
   static StreamController<Location> getLocationUpdates() {
