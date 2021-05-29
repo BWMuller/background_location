@@ -5,8 +5,6 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import 'background_callback.dart';
 
@@ -104,28 +102,26 @@ class BackgroundLocation {
     }
   }
 
-  /// Ask the user for location permissions
-  // ignore: always_declare_return_types
-  static getPermissions({Function? onGranted, Function? onDenied}) async {
-    await Permission.locationWhenInUse.request();
-    if (await Permission.locationWhenInUse.isGranted) {
-      if (onGranted != null) {
-        onGranted();
-      }
-    } else if (await Permission.locationWhenInUse.isDenied ||
-        await Permission.locationWhenInUse.isPermanentlyDenied ||
-        await Permission.locationWhenInUse.isRestricted) {
-      if (onDenied != null) {
-        onDenied();
-      }
-    }
+  /// Get the current location once.
+  Future<Location> getCurrentLocation() async {
+    var completer = Completer<Location>();
+
+    var _location = Location();
+    await getLocationUpdates((location) {
+      _location.latitude = location.latitude;
+      _location.longitude = location.longitude;
+      _location.accuracy = location.accuracy;
+      _location.altitude = location.altitude;
+      _location.bearing = location.bearing;
+      _location.speed = location.speed;
+      _location.time = location.time;
+      completer.complete(_location);
+    });
+
+    return completer.future;
   }
 
-  /// Check what the current permissions status is
-  static Future<PermissionStatus> checkPermissions() async {
-    var permission = await Permission.locationWhenInUse.status;
-    return permission;
-  }
+
 
   /// Register a function to recive location updates as long as the location
   /// service has started
