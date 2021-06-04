@@ -231,9 +231,7 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
                 override fun onLocationResult(locationResult: LocationResult?) {
                     super.onLocationResult(locationResult)
                     if (locationResult != null) {
-                        for (location in locationResult.getLocations()) {
-                            onNewLocation(location)
-                        }
+                        onNewLocation(locationResult.lastLocation, locationResult.getLocations())
                     }
                 }
             }
@@ -306,7 +304,7 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
         }
     }
 
-    private fun onNewLocation(location: Location) {
+    private fun onNewLocation(location: Location, locations: List<Location> = ArrayList()) {
         mLocation = location
         val intent = Intent(ACTION_BROADCAST)
         intent.putExtra(EXTRA_LOCATION, location)
@@ -322,8 +320,23 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
         locationMap["time"] = location.time.toDouble()
         locationMap["is_mock"] = location.isFromMockProvider
 
+        val locationsMap = ArrayList<HashMap<String, Any>>()
+        for (loc in locations) {
+            val locMap = HashMap<String, Any>()
+            locMap["latitude"] = loc.latitude
+            locMap["longitude"] = loc.longitude
+            locMap["altitude"] = loc.altitude
+            locMap["accuracy"] = loc.accuracy.toDouble()
+            locMap["bearing"] = loc.bearing.toDouble()
+            locMap["speed"] = loc.speed.toDouble()
+            locMap["time"] = loc.time.toDouble()
+            locMap["is_mock"] = loc.isFromMockProvider
+            locationsMap.add(locMap)
+        }
+
         val result: HashMap<Any, Any> =
             hashMapOf(
+                "ARG_LOCATIONS" to locationsMap,
                 "ARG_LOCATION" to locationMap,
                 "ARG_CALLBACK" to mLocationCallbackHandle
             )

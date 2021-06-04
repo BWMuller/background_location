@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 const BACKGROUND_CHANNEL_ID = "almoullim.com/background_location_service";
 const ARG_CALLBACK = "ARG_CALLBACK";
 const ARG_LOCATION = "ARG_LOCATION";
+const ARG_LOCATIONS = "ARG_LOCATIONS";
 const BCM_LOCATION = "BCM_LOCATION";
 const BCM_NOTIFICATION_ACTION = "BCM_NOTIFICATION_ACTION";
 
@@ -23,8 +24,16 @@ void callbackHandler() {
       int callbackArg = args[ARG_CALLBACK] ?? 0;
       if (callbackArg != 0) {
         final Function? callback = PluginUtilities.getCallbackFromHandle(CallbackHandle.fromRawHandle(callbackArg));
-        if (callback != null)
-          callback(Location.fromJson(args[ARG_LOCATION]));
+        if (callback != null) {
+          var locations = args[ARG_LOCATIONS];
+          if (locations != null && '$locations' != '[]') {
+            for (var loc in locations) {
+              callback(Location.fromJson(loc));
+            }
+          } else {
+            callback(Location.fromJson(args[ARG_LOCATION]));
+          }
+        }
       } else {
         log("BGLocationCallback: $args");
       }
