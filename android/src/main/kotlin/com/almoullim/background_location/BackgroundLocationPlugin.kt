@@ -2,6 +2,7 @@ package com.almoullim.background_location
 
 import android.Manifest
 import android.app.Activity
+import android.app.ActivityManager
 import android.content.*
 import android.content.pm.PackageManager
 import android.location.Location
@@ -139,6 +140,19 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                     LocalBroadcastManager.getInstance(registrar.activeContext()).sendBroadcast(intent)
                 }
 
+                result.success(0);
+            }
+            call.method == "is_service_running" -> {
+                val manager: ActivityManager = registrar.activeContext().getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+                for (service in manager.getRunningServices(Integer.MAX_VALUE)) {
+                    if (LocationUpdatesService::class.java.getName() == service.service.getClassName()) {
+                        if (service.foreground)
+                            result.success(1)
+                        else
+                            result.success(0)
+                        return
+                    }
+                }
                 result.success(0);
             }
             else -> result.notImplemented()

@@ -5,6 +5,7 @@ import CoreLocation
 public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate {
     static var locationManager: CLLocationManager?
     static var channel: FlutterMethodChannel?
+    static var running = false
     
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = SwiftBackgroundLocationPlugin()
@@ -15,19 +16,22 @@ public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationM
     }
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        SwiftBackgroundLocationPlugin.locationManager = CLLocationManager()
-        SwiftBackgroundLocationPlugin.locationManager?.delegate = self
-        SwiftBackgroundLocationPlugin.locationManager?.requestAlwaysAuthorization()
+        if (SwiftBackgroundLocationPlugin.locationManager == null) {
+            SwiftBackgroundLocationPlugin.locationManager = CLLocationManager()
+            SwiftBackgroundLocationPlugin.locationManager?.delegate = self
+            SwiftBackgroundLocationPlugin.locationManager?.requestAlwaysAuthorization()
 
-        SwiftBackgroundLocationPlugin.locationManager?.allowsBackgroundLocationUpdates = true
-        if #available(iOS 11.0, *) {
-            SwiftBackgroundLocationPlugin.locationManager?.showsBackgroundLocationIndicator = true;
+            SwiftBackgroundLocationPlugin.locationManager?.allowsBackgroundLocationUpdates = true
+            if #available(iOS 11.0, *) {
+                SwiftBackgroundLocationPlugin.locationManager?.showsBackgroundLocationIndicator = true;
+            }
+            SwiftBackgroundLocationPlugin.locationManager?.pausesLocationUpdatesAutomatically = false
         }
-        SwiftBackgroundLocationPlugin.locationManager?.pausesLocationUpdatesAutomatically = false
 
         SwiftBackgroundLocationPlugin.channel?.invokeMethod("location", arguments: "method")
 
         if (call.method == "start_location_service") {
+            SwiftBackgroundLocationPlugin.running = true
             SwiftBackgroundLocationPlugin.channel?.invokeMethod("location", arguments: "start_location_service")
             
             let args = call.arguments as? Dictionary<String, Any>
@@ -53,12 +57,16 @@ public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationM
                 }
             }
 
-            SwiftBackgroundLocationPlugin.locationManager?.startUpdatingLocation() 
+            SwiftBackgroundLocationPlugin.locationManager?.startUpdatingLocation()
+            result(true)
+        } else if (call.method == "is_service_running") {
+            result(SwiftBackgroundLocationPlugin.running)
         } else if (call.method == "stop_location_service") {
+            SwiftBackgroundLocationPlugin.running = false
             SwiftBackgroundLocationPlugin.channel?.invokeMethod("location", arguments: "stop_location_service")
             SwiftBackgroundLocationPlugin.locationManager?.stopUpdatingLocation()
+            result(true)
         }
-        result(true)
     }
     
     public func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {

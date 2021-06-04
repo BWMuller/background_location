@@ -102,6 +102,10 @@ class BackgroundLocation {
     }
   }
 
+  static Future<bool> isServiceRunning() async {
+    return await _channel.invokeMethod('is_service_running') == 1;
+  }
+
   /// Register a function to recive location updates as long as the location
   /// service has started
   static StreamController<Location> getLocationUpdates() {

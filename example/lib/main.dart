@@ -87,6 +87,11 @@ class _MyAppState extends State<MyApp> {
                   child: Text('Update notification')),
               ElevatedButton(
                   onPressed: () {
+                    BackgroundLocation.isServiceRunning().then((value) => log("Is Running: $value"));
+                  },
+                  child: Text('Check service')),
+              ElevatedButton(
+                  onPressed: () {
                     BackgroundLocation.stopLocationService();
                   },
                   child: Text('Stop Location Service')),
