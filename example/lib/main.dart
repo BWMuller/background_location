@@ -125,8 +125,8 @@ void actionCallback(Location? location) {
   log("Action pressed: $location");
 }
 
-void locationCallback(Location location) {
-  log("Got Main location: $location");
+void locationCallback(List<Location> locations) {
+  log("Got Main location: $locations");
   // setState(() {
   //   latitude = location.latitude.toString();
   //   longitude = location.longitude.toString();

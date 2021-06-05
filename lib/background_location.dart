@@ -19,7 +19,7 @@ enum LocationPriority {
   PRIORITY_NO_POWER,
 }
 
-typedef LocationCallback = void Function(Location value);
+typedef LocationCallback = void Function(List<Location> value);
 typedef OptLocationCallback = void Function(Location? value);
 
 /// BackgroundLocation plugin to get background

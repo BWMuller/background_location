@@ -25,14 +25,16 @@ void callbackHandler() {
       if (callbackArg != 0) {
         final Function? callback = PluginUtilities.getCallbackFromHandle(CallbackHandle.fromRawHandle(callbackArg));
         if (callback != null) {
+          var locs = List.empty(growable: true);
           var locations = args[ARG_LOCATIONS];
           if (locations != null && '$locations' != '[]') {
             for (var loc in locations) {
-              callback(Location.fromJson(loc));
+              locs.add(Location.fromJson(loc));
             }
           } else {
-            callback(Location.fromJson(args[ARG_LOCATION]));
+            locs.add(Location.fromJson(args[ARG_LOCATION]));
           }
+          callback(locs);
         }
       } else {
         log("BGLocationCallback: $args");
