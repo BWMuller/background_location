@@ -5,7 +5,7 @@ import CoreLocation
 public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationManagerDelegate {
     static var locationManager: CLLocationManager?
     static var channel: FlutterMethodChannel?
-    static var running = false
+    var running = false
     
     public static func register(with registrar: FlutterPluginRegistrar) {
         let instance = SwiftBackgroundLocationPlugin()
@@ -13,10 +13,11 @@ public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationM
         SwiftBackgroundLocationPlugin.channel = FlutterMethodChannel(name: "almoullim.com/background_location", binaryMessenger: registrar.messenger())
         registrar.addMethodCallDelegate(instance, channel: SwiftBackgroundLocationPlugin.channel!)
         SwiftBackgroundLocationPlugin.channel?.setMethodCallHandler(instance.handle)
+        instance.running = false
     }
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        if (SwiftBackgroundLocationPlugin.locationManager == null) {
+        if (SwiftBackgroundLocationPlugin.locationManager == nil) {
             SwiftBackgroundLocationPlugin.locationManager = CLLocationManager()
             SwiftBackgroundLocationPlugin.locationManager?.delegate = self
             SwiftBackgroundLocationPlugin.locationManager?.requestAlwaysAuthorization()
@@ -31,7 +32,6 @@ public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationM
         SwiftBackgroundLocationPlugin.channel?.invokeMethod("location", arguments: "method")
 
         if (call.method == "start_location_service") {
-            SwiftBackgroundLocationPlugin.running = true
             SwiftBackgroundLocationPlugin.channel?.invokeMethod("location", arguments: "start_location_service")
             
             let args = call.arguments as? Dictionary<String, Any>
@@ -58,11 +58,12 @@ public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationM
             }
 
             SwiftBackgroundLocationPlugin.locationManager?.startUpdatingLocation()
+            running = true
             result(true)
         } else if (call.method == "is_service_running") {
-            result(SwiftBackgroundLocationPlugin.running)
+            result(running)
         } else if (call.method == "stop_location_service") {
-            SwiftBackgroundLocationPlugin.running = false
+            running = false
             SwiftBackgroundLocationPlugin.channel?.invokeMethod("location", arguments: "stop_location_service")
             SwiftBackgroundLocationPlugin.locationManager?.stopUpdatingLocation()
             result(true)

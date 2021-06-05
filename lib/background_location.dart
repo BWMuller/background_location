@@ -103,7 +103,8 @@ class BackgroundLocation {
   }
 
   static Future<bool> isServiceRunning() async {
-    return await _channel.invokeMethod('is_service_running') == 1;
+    var result = await _channel.invokeMethod('is_service_running');
+    return result == 1 || result == true;
   }
 
   /// Register a function to recive location updates as long as the location
