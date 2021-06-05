@@ -13,6 +13,7 @@ import android.location.Location
 import android.os.*
 import android.util.Log
 import android.graphics.BitmapFactory
+import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.graphics.drawable.IconCompat
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -75,6 +76,29 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
         private val NOTIFICATION_ID = 12345678
     }
 
+    fun getDrawableResourceId(context: Context, bitmapReference: String): Int {
+        val reference: Array<String> = bitmapReference.split("/").toTypedArray()
+        try {
+            var resId: Int
+            val type = "drawable"
+            val label = reference[1]
+
+            // Resources protected from obfuscation
+            // https://developer.android.com/studio/build/shrink-code#strict-reference-checks
+            val name: String = String.format("res_%1s", label)
+            resId = context.getResources().getIdentifier(name, type, context.getPackageName())
+            Log.w(TAG, "Getting resource: $name - $resId")
+            if (resId == 0) {
+                resId = context.getResources().getIdentifier(label, type, context.getPackageName())
+            }
+            return resId
+        } catch (e: Exception) {
+            Log.w(TAG, "Error getting resource: $bitmapReference", e)
+            e.printStackTrace()
+        }
+        return 0
+    }
+
     private val notification: NotificationCompat.Builder
         get() {
 
@@ -97,11 +121,17 @@ class LocationUpdatesService : Service(), MethodChannel.MethodCallHandler {
                 var resourceId: Int = 0
                 if (NOTIFICATION_ICON.startsWith("@mipmap"))
                     resourceId = resources.getIdentifier(NOTIFICATION_ICON, "mipmap", packageName)
-                if (NOTIFICATION_ICON.startsWith("@drawable"))
-                    resourceId = resources.getIdentifier(NOTIFICATION_ICON, "drawable", packageName)
+                if (NOTIFICATION_ICON.startsWith("@drawable")) {
+                    resourceId = getDrawableResourceId(this, NOTIFICATION_ICON)
+                }
 
-                resources.getDrawable(resourceId)
-                builder.setSmallIcon(resourceId)
+                if (resourceId != 0) {
+                    ContextCompat.getDrawable(this, resourceId)
+                    builder.setSmallIcon(resourceId)
+                } else {
+                    Log.w(TAG, "Provided resource resolved to $resourceId ${getPackageName()} - $NOTIFICATION_ICON")
+                    builder.setSmallIcon(resources.getIdentifier("@mipmap/ic_launcher", "mipmap", packageName))
+                }
             } catch (tr: Throwable) {
                 Log.w(TAG, "Unable to set small notification icon", tr)
                 builder.setSmallIcon(resources.getIdentifier("@mipmap/ic_launcher", "mipmap", packageName))
