@@ -119,9 +119,9 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                 val notificationMessage: String? = call.argument("message");
                 val notificationIcon: String? = call.argument("icon");
                 val actionText: String? = call.argument("actionText");
-                var callback: Long? = 0L
+                var callback: Long = 0L
                 try {
-                    callback = call.argument("actionCallback")
+                    callback = call.argument("actionCallback") ?: 0L
                 } catch (ex: Throwable) {
                 }
 
@@ -130,7 +130,7 @@ class BackgroundLocationPlugin() : MethodCallHandler, PluginRegistry.RequestPerm
                 if (notificationMessage != null) LocationUpdatesService.NOTIFICATION_MESSAGE = notificationMessage
                 if (notificationIcon != null) LocationUpdatesService.NOTIFICATION_ICON = notificationIcon
                 if (actionText != null) LocationUpdatesService.NOTIFICATION_ACTION = actionText
-                if (callback != null) LocationUpdatesService.NOTIFICATION_ACTION_CALLBACK = callback
+                if (callback != 0L) LocationUpdatesService.NOTIFICATION_ACTION_CALLBACK = callback
 
                 val pref = registrar.activeContext().getSharedPreferences("backgroundLocationPreferences", Context.MODE_PRIVATE)
                 if (pref.getBoolean("locationActive", false)) {
