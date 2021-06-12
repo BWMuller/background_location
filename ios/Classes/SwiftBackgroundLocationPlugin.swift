@@ -15,8 +15,8 @@ public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationM
         SwiftBackgroundLocationPlugin.channel?.setMethodCallHandler(instance.handle)
         instance.running = false
     }
-    
-    public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+
+    private func initLocationManager() {
         if (SwiftBackgroundLocationPlugin.locationManager == nil) {
             SwiftBackgroundLocationPlugin.locationManager = CLLocationManager()
             SwiftBackgroundLocationPlugin.locationManager?.delegate = self
@@ -28,10 +28,13 @@ public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationM
             }
             SwiftBackgroundLocationPlugin.locationManager?.pausesLocationUpdatesAutomatically = false
         }
-
+    }
+    
+    public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         SwiftBackgroundLocationPlugin.channel?.invokeMethod("location", arguments: "method")
 
         if (call.method == "start_location_service") {
+            initLocationManager()
             SwiftBackgroundLocationPlugin.channel?.invokeMethod("location", arguments: "start_location_service")
             
             let args = call.arguments as? Dictionary<String, Any>
@@ -63,6 +66,7 @@ public class SwiftBackgroundLocationPlugin: NSObject, FlutterPlugin, CLLocationM
         } else if (call.method == "is_service_running") {
             result(running)
         } else if (call.method == "stop_location_service") {
+            initLocationManager()
             running = false
             SwiftBackgroundLocationPlugin.channel?.invokeMethod("location", arguments: "stop_location_service")
             SwiftBackgroundLocationPlugin.locationManager?.stopUpdatingLocation()
